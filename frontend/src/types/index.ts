@@ -13,6 +13,7 @@ export const ACTIVITY = {
   SLA_POLICY: 'SLA_POLICY',
   USER: 'USER',
   ROLE: 'ROLE',
+  API_LOG: 'API_LOG',
 } as const;
 export type ActivityCode = (typeof ACTIVITY)[keyof typeof ACTIVITY];
 
@@ -343,4 +344,38 @@ export interface ReportSummaryDto {
   byCategory: KeyCount[];
   byDay: { date: string; count: number }[];
   agentPerformance: AgentPerformanceDto[];
+}
+
+// ---- API logs (API_LOG:R) ----
+export interface ApiLogListItemDto {
+  id: number;
+  module: string;
+  traceId: string;
+  ip: string | null;
+  userId: string | null;
+  userName: string | null;
+  method: string;
+  url: string;
+  statusCode: number;
+  durationMs: number;
+  createdDate: string;
+}
+
+export interface ApiLogDetailDto extends ApiLogListItemDto {
+  request: string | null;
+  response: string | null;
+  userAgent: string | null;
+}
+
+export interface ApiLogsQuery {
+  traceId?: string;
+  userId?: string;
+  url?: string;
+  method?: string;
+  statusCode?: number;
+  /** ISO date-time (the API compares against CreatedDate as DateTime) */
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
 }
