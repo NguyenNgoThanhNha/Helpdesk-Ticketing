@@ -5,8 +5,8 @@ Dự án #1 trong roadmap ([spec](../../Roadmap/projects/01-Ticketing-Helpdesk.m
 | Phần | Công nghệ |
 |---|---|
 | Backend | .NET 10 · ASP.NET Core · MediatR 12 · FluentValidation · Mapster · EF Core + SQL Server · JWT + refresh rotation · Serilog |
-| Frontend | React 18 + TS strict · Vite · Ant Design 5 · TanStack Query · Zustand · React Hook Form + Zod · Recharts |
-| Test | xUnit + NSubstitute + EF InMemory (39 unit) · WebApplicationFactory + SQL Server thật (5 integration) · Vitest + RTL + MSW (36) |
+| Frontend | React 19 + TS strict · Vite · **shadcn/ui** (Radix + Tailwind v4) · TanStack Query + TanStack Table · Zustand · React Hook Form + Zod · Recharts (shadcn chart) · cấu trúc feature-based |
+| Test | xUnit + NSubstitute + EF InMemory (39 unit) · WebApplicationFactory + SQL Server thật (5 integration) · Vitest + RTL + MSW (50) |
 
 ## Chạy local (không cần Docker)
 

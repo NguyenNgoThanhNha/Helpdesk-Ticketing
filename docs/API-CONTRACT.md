@@ -7,8 +7,9 @@ Lỗi trả về `application/problem+json` (ProblemDetails):
 
 ```json
 { "type": "...", "title": "Validation failed", "status": 400, "detail": "...",
-  "errors": { "title": ["Title is required"] }, "traceId": "..." }
+  "errors": { "title": ["Title is required"] }, "traceId": "...", "instance": "/api/v1/tickets" }
 ```
+Key trong `errors` **luôn camelCase**, kể cả lỗi binding tự động của ASP.NET (vd `statusCode=abc`). `instance` là path của request (có thể không có).
 
 | Status | Khi nào |
 |---|---|
@@ -232,6 +233,7 @@ ReportSummaryDto = {
 
 ## API logs — debug (`API_LOG:R`)
 Mọi request POST/PUT/PATCH/DELETE (và GET lỗi ≥ 400) được ghi vào `Sys_LogApi`; `traceId` trùng với `traceId` trong ProblemDetails.
+`from` / `to` là **date-time ISO-8601 UTC** (vd `2026-09-23T00:00:00Z`), so sánh `CreatedDate >= from` và `<= to`. Muốn lấy trọn một ngày theo giờ local thì FE gửi đầu ngày và cuối ngày đã đổi sang UTC.
 
 | Method | Path | Response |
 |---|---|---|

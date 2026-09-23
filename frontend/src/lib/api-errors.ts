@@ -69,7 +69,9 @@ export function traceIdToastOptions(traceId: string | undefined) {
 
 /** Error toast; includes the ProblemDetails traceId (with a copy action) when the API returned one. */
 export function showError(error: unknown, fallback?: string) {
-  toast.error(getErrorMessage(error, fallback), traceIdToastOptions(getTraceId(error)));
+  const message = getErrorMessage(error, fallback);
+  // same message → one toast (updated with the latest traceId) instead of a stack of duplicates
+  toast.error(message, { id: `error:${message}`, ...traceIdToastOptions(getTraceId(error)) });
 }
 
 /**

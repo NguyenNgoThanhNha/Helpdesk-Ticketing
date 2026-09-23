@@ -12,7 +12,20 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:5080', changeOrigin: true },
+      // trailing slash: must not swallow the SPA route /api-logs
+      '/api/': { target: 'http://localhost:5080', changeOrigin: true },
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['radix-ui', 'cmdk', 'sonner', 'lucide-react', 'react-day-picker', 'next-themes'],
+          charts: ['recharts'],
+          vendor: ['@tanstack/react-query', '@tanstack/react-table', 'axios', 'zustand', 'react-hook-form', 'zod', 'dayjs'],
+        },
+      },
     },
   },
   test: {
