@@ -1,5 +1,12 @@
-export const fmtHours = (h: number | null | undefined) => (h === null || h === undefined ? '—' : `${h.toFixed(1)}h`);
-export const fmtPct = (p: number | null | undefined) => (p === null || p === undefined ? '—' : `${p.toFixed(1)}%`);
+const oneDecimal = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const integer = new Intl.NumberFormat('vi-VN');
+
+/** "4,2 giờ" */
+export const fmtHours = (h: number | null | undefined) => (h === null || h === undefined ? '—' : `${oneDecimal.format(h)} giờ`);
+/** "82,5%" */
+export const fmtPct = (p: number | null | undefined) => (p === null || p === undefined ? '—' : `${oneDecimal.format(p)}%`);
+/** "1.234" */
+export const fmtInt = (n: number) => integer.format(n);
 
 /** Status colors for charts (match the status badges). */
 export const STATUS_CHART_COLORS: Record<string, string> = {
@@ -12,3 +19,6 @@ export const STATUS_CHART_COLORS: Record<string, string> = {
 };
 
 export const FALLBACK_CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+
+/** Series label of the ticket-count charts. */
+export const TICKET_COUNT_LABEL = 'Số ticket';

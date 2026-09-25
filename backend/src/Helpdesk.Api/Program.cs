@@ -1,9 +1,14 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.IO.Compression;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.ResponseCompression;
 using Helpdesk.Api.Authorization;
 using Helpdesk.Api.Controllers.V1;
 using Helpdesk.Api.Infrastructure;
+using Helpdesk.Api.Realtime;
+using Helpdesk.Application.Common.Realtime;
+using Microsoft.AspNetCore.SignalR;
 using Helpdesk.Application;
 using Helpdesk.Application.Common.Interfaces;
 using Helpdesk.Infrastructure;
@@ -40,7 +45,24 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase; // key trong errors (kể cả lỗi binding tự động) luôn camelCase
     });
 builder.Services.AddProblemDetails();
+
+// Nén response JSON (Brotli ưu tiên, Gzip dự phòng). Fastest: nén ~80% JSON mà gần như không tốn CPU.
+builder.Services.AddResponseCompression(o =>
+{
+    o.EnableForHttps = true;
+    o.Providers.Add<BrotliCompressionProvider>();
+    o.Providers.Add<GzipCompressionProvider>();
+    o.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/problem+json"]);
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+// Realtime (SignalR): thông báo + ticket thay đổi. Nhiều instance → .AddStackExchangeRedis(...) làm backplane.
+builder.Services.AddSignalR()
+    .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter()));
+builder.Services.AddSingleton<IUserIdProvider, SubClaimUserIdProvider>();
+builder.Services.AddSingleton<IRealtimePublisher, SignalRRealtimePublisher>();
 builder.Services.AddHealthChecks().AddDbContextCheck<HelpdeskDbContext>();
 
 // Auth: JWT chỉ mang định danh; quyền kiểm tra qua [HasPermission] + IPermissionService.
@@ -51,6 +73,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
         o.MapInboundClaims = false; // giữ nguyên "sub", "name", "email"
+        // WebSocket không gửi được header Authorization → SignalR gửi token qua query ?access_token= (CHỈ chấp nhận cho /hubs).
+        o.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                var token = ctx.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) && ctx.HttpContext.Request.Path.StartsWithSegments("/hubs")) ctx.Token = token;
+                return Task.CompletedTask;
+            }
+        };
         o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidIssuer = jwt.Issuer,
@@ -104,7 +136,10 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // ---------- Pipeline ----------
-app.UseApiLogging();            // ngoài cùng → ghi được cả response lỗi do exception handler sinh ra
+// Nén đứng NGOÀI api logging (log ghi JSON gốc, không phải byte đã nén) và KHÔNG nén /auth/* —
+// response có token + nén HTTPS = rủi ro BREACH (RULES 8.8).
+app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/api/v1/auth"), branch => branch.UseResponseCompression());
+app.UseApiLogging();            // ngay sau nén → ghi được cả response lỗi do exception handler sinh ra
 app.UseExceptionHandler();
 app.UseStatusCodePages();       // 401/403/404 rỗng → ProblemDetails
 app.UseSerilogRequestLogging();
@@ -119,6 +154,7 @@ app.UseUserLogContext();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>(ConstRealtime.HubPath);
 app.MapHealthChecks("/health");
 
 await InitializeDatabaseAsync(app);

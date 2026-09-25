@@ -5,7 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { ReportSummaryDto } from '@/types';
-import { fmtHours, fmtPct } from '../format';
+import { statusLabel } from '@/lib/labels';
+import { fmtHours, fmtInt, fmtPct } from '../format';
 
 function Kpi({
   title,
@@ -53,19 +54,25 @@ export function KpiCards({ data, loading }: { data: ReportSummaryDto | undefined
   const compliance = data?.slaComplianceRate;
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-      <Kpi title="Tổng" value={data?.totalTickets ?? 0} icon={<Inbox />} loading={loading} to="/tickets" />
-      <Kpi title="Open" value={data?.openTickets ?? 0} icon={<FolderOpen />} loading={loading} to="/tickets?status=Open" />
+      <Kpi title="Tổng ticket" value={fmtInt(data?.totalTickets ?? 0)} icon={<Inbox />} loading={loading} to="/tickets" />
       <Kpi
-        title="Quá SLA"
-        value={data?.breachedTickets ?? 0}
+        title={statusLabel('Open')}
+        value={fmtInt(data?.openTickets ?? 0)}
+        icon={<FolderOpen />}
+        loading={loading}
+        to="/tickets?status=Open"
+      />
+      <Kpi
+        title="Quá hạn SLA"
+        value={fmtInt(data?.breachedTickets ?? 0)}
         icon={<Siren />}
         loading={loading}
         valueClassName="text-red-600 dark:text-red-400"
         to="/tickets?slaState=Breached"
       />
-      <Kpi title="Avg resolution" value={fmtHours(data?.avgResolutionHours)} icon={<Clock />} loading={loading} />
+      <Kpi title="Thời gian xử lý TB" value={fmtHours(data?.avgResolutionHours)} icon={<Clock />} loading={loading} />
       <Kpi
-        title="SLA compliance"
+        title="Tỉ lệ đạt SLA"
         value={fmtPct(compliance)}
         icon={<CircleCheck />}
         loading={loading}

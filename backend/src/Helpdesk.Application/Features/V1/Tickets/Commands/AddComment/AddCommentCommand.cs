@@ -1,3 +1,4 @@
+using Helpdesk.Application.Common.Realtime;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using Helpdesk.Application.Features.V1.Tickets.DTOs;
@@ -25,6 +26,7 @@ public sealed class AddCommentCommandHandler(
     IUnitOfWork<HelpdeskDbContext> unitOfWork,
     ICurrentUser currentUser,
     ITicketNotifier notifier,
+    IRealtimeOutbox realtime,
     TimeProvider clock) : IRequestHandler<AddCommentCommand, CommentDto>
 {
     public async Task<CommentDto> Handle(AddCommentCommand request, CancellationToken ct)
@@ -45,6 +47,7 @@ public sealed class AddCommentCommandHandler(
             await notifier.NotifyAdminsAsync(author.Id, ticket, $"Khách hàng đã phản hồi (chưa gán): {ticket.Title}", ct);
 
         await unitOfWork.SaveChangesAsync(ct);
+        realtime.TicketChanged(ticket.Id, TicketChangeKind.Commented, author.Id);
 
         return new CommentDto(comment.Id, new UserSummaryDto(author.Id, author.FullName), fromRequester,
             comment.Body, comment.CreatedDate, []);

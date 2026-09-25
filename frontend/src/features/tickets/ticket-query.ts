@@ -1,5 +1,5 @@
 import type { SortingState } from '@tanstack/react-table';
-import { oneOf, toPositiveInt } from '@/lib/hooks/use-url-params';
+import { oneOf, toPositiveInt, type ParamPatch } from '@/lib/hooks/use-url-params';
 import {
   SLA_STATES,
   TICKET_PRIORITIES,
@@ -27,6 +27,30 @@ export function parseTicketQuery(params: URLSearchParams): TicketsQuery {
     page: toPositiveInt(params.get('page')) ?? 1,
     pageSize: Math.min(toPositiveInt(params.get('pageSize')) ?? DEFAULT_PAGE_SIZE, 100),
     sort: oneOf<TicketSort>(TICKET_SORTS, params.get('sort')) ?? DEFAULT_SORT,
+  };
+}
+
+/** True when a filter or the search is active (the assignee only counts where the user can change it). */
+export function hasActiveFilters(query: TicketsQuery, includeAssignee: boolean): boolean {
+  return (
+    !!query.status ||
+    !!query.priority ||
+    !!query.categoryId ||
+    !!query.slaState ||
+    !!query.search ||
+    (includeAssignee && !!query.assigneeId)
+  );
+}
+
+/** URL patch removing every filter and the search (paging resets with it). */
+export function clearFiltersPatch(includeAssignee: boolean): ParamPatch {
+  return {
+    status: undefined,
+    priority: undefined,
+    categoryId: undefined,
+    slaState: undefined,
+    search: undefined,
+    ...(includeAssignee ? { assigneeId: undefined } : {}),
   };
 }
 

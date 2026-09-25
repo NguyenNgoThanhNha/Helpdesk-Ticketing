@@ -45,17 +45,17 @@ describe('ApiLogsPage', () => {
     const calls = captureRequests();
     renderWithProviders(<ApiLogsPage />, { path: '/api-logs', route: '/api-logs?url=tickets&page=2' });
 
-    const table = await screen.findByRole('table', { name: 'API logs' });
+    const table = await screen.findByRole('table', { name: 'Nhật ký API' });
     expect(await within(table).findByText('/api/v1/tickets/999999')).toBeInTheDocument();
     expect(within(table).getByText('404')).toBeInTheDocument();
     expect(within(table).getByText('620 ms')).toBeInTheDocument();
     expect(calls[calls.length - 1].get('url')).toBe('tickets');
     expect(calls[calls.length - 1].get('page')).toBe('2');
 
-    await chooseSelectOption(user, 'Method', 'GET');
+    await chooseSelectOption(user, 'Phương thức', 'GET');
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/api-logs?url=tickets&method=GET'));
 
-    await user.type(screen.getByLabelText('Status code'), '404');
+    await user.type(screen.getByLabelText('Mã trạng thái'), '404');
     await user.type(screen.getByLabelText('traceId'), '00-8e50');
     await user.click(screen.getByRole('button', { name: /Lọc/ }));
     await waitFor(() => {
@@ -80,7 +80,7 @@ describe('ApiLogsPage', () => {
 
     await user.click(await screen.findByText('/api/v1/auth/login'));
     const sheet = await screen.findByRole('dialog');
-    expect(within(sheet).getByText('API log #86')).toBeInTheDocument();
+    expect(within(sheet).getByText('Nhật ký API #86')).toBeInTheDocument();
     await waitFor(() => expect(detailId).toBe('86'));
 
     const request = await within(sheet).findByLabelText('Request');
@@ -89,8 +89,8 @@ describe('ApiLogsPage', () => {
     expect(within(sheet).getByLabelText('Response').textContent).toContain('"status": 404');
     expect(within(sheet).getByText(apiLogItems[1].traceId)).toBeInTheDocument();
 
-    await user.click(within(sheet).getByRole('button', { name: 'Copy request' }));
+    await user.click(within(sheet).getByRole('button', { name: 'Sao chép request' }));
     expect(await navigator.clipboard.readText()).toContain('"email": "admin@helpdesk.local"');
-    expect(within(sheet).getByText('Đã copy')).toBeInTheDocument();
+    expect(within(sheet).getByText('Đã sao chép')).toBeInTheDocument();
   });
 });

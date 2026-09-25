@@ -34,7 +34,7 @@ describe('api-errors', () => {
     expect(setError).toHaveBeenCalledTimes(2);
   });
 
-  it('error toasts show the traceId with a "Copy traceId" action', async () => {
+  it('error toasts show the traceId with a "Sao chép traceId" action', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     const err = axiosError(500, { title: 'Server error', traceId: '00-abc-01' });
@@ -45,7 +45,7 @@ describe('api-errors', () => {
       'Server error',
       expect.objectContaining({
         description: 'traceId: 00-abc-01',
-        action: expect.objectContaining({ label: 'Copy traceId' }),
+        action: expect.objectContaining({ label: 'Sao chép traceId' }),
       }),
     );
     const options = vi.mocked(toast.error).mock.calls[0][1] as unknown as { action: { onClick: () => void } };

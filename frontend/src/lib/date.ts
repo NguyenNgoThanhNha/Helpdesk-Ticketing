@@ -21,7 +21,7 @@ export const formatDateTimeShort = (value: string | null | undefined) => {
   return d.year() === dayjs().year() ? d.format('DD/MM HH:mm') : d.format('DD/MM/YYYY');
 };
 
-export const formatDate =(value: string | null | undefined) => (value ? dayjs(value).format('DD/MM/YYYY') : '—');
+export const formatDate = (value: string | null | undefined) => (value ? dayjs(value).format('DD/MM/YYYY') : '—');
 
 export const fromNow = (value: string) => dayjs(value).fromNow();
 
@@ -30,18 +30,18 @@ export const toApiDate = (d: Date) => dayjs(d).format('YYYY-MM-DD');
 
 function humanizeMinutes(totalMinutes: number): string {
   const minutes = Math.abs(Math.round(totalMinutes));
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return `${minutes} phút`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
     const rest = minutes % 60;
-    return rest && hours < 10 ? `${hours}h${rest}m` : `${hours}h`;
+    return rest && hours < 10 ? `${hours} giờ ${rest} phút` : `${hours} giờ`;
   }
   const days = Math.floor(hours / 24);
   const restHours = hours % 24;
-  return restHours ? `${days}d ${restHours}h` : `${days}d`;
+  return restHours ? `${days} ngày ${restHours} giờ` : `${days} ngày`;
 }
 
-/** "còn 2h" / "quá hạn 3h" relative to now. */
+/** "còn 2 giờ" / "quá hạn 3 giờ" relative to now. */
 export function slaCountdown(dueAt: string | null | undefined, now: dayjs.Dayjs = dayjs()): string | null {
   if (!dueAt) return null;
   const diff = dayjs(dueAt).diff(now, 'minute', true);

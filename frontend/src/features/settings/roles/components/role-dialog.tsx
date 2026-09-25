@@ -22,7 +22,7 @@ import { normalizePermissions, PermissionMatrix, toPermissionInputs } from '../.
 import { useActivities, useRole, useSaveRole } from '../hooks/use-roles';
 
 const roleSchema = z.object({
-  name: z.string().trim().min(1, 'Vui lòng nhập tên role').max(100, 'Tối đa 100 ký tự'),
+  name: z.string().trim().min(1, 'Vui lòng nhập tên vai trò').max(100, 'Tối đa 100 ký tự'),
   description: z.string().trim().max(500, 'Tối đa 500 ký tự'),
 });
 type RoleForm = z.infer<typeof roleSchema>;
@@ -60,11 +60,11 @@ export function RoleDialog({
       { name: v.name, description: v.description || null, activities: normalizePermissions(activities) },
       {
         onSuccess: (r) => {
-          toast.success(role ? `Đã cập nhật role ${r.name}` : `Đã tạo role ${r.name}`);
+          toast.success(role ? `Đã cập nhật vai trò ${r.name}` : `Đã tạo vai trò ${r.name}`);
           onOpenChange(false);
         },
         onError: (err) => {
-          if (getStatus(err) === 409) form.setError('name', { type: 'server', message: 'Tên role đã tồn tại' });
+          if (getStatus(err) === 409) form.setError('name', { type: 'server', message: 'Tên vai trò đã tồn tại' });
           else if (!applyFieldErrors(err, ['name', 'description'] as const, form.setError)) showError(err);
         },
       },
@@ -75,12 +75,12 @@ export function RoleDialog({
     <Dialog open={open} onOpenChange={(o) => !save.isPending && onOpenChange(o)}>
       <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{role ? `Sửa role: ${role.name}` : 'Tạo role'}</DialogTitle>
+          <DialogTitle>{role ? `Sửa vai trò: ${role.name}` : 'Tạo vai trò'}</DialogTitle>
           <DialogDescription>Chọn quyền C/R/U/D cho từng chức năng.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form id="role-form" onSubmit={onSubmit} noValidate className="space-y-4">
-            <TextFormField control={form.control} name="name" label="Tên role" required />
+            <TextFormField control={form.control} name="name" label="Tên vai trò" required />
             <TextareaFormField control={form.control} name="description" label="Mô tả" rows={2} />
             <div className="space-y-2">
               <Label>Quyền</Label>

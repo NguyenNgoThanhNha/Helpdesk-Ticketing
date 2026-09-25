@@ -42,7 +42,7 @@ export function RolesTab() {
     },
     {
       id: 'userCount',
-      header: 'Số user',
+      header: 'Số người dùng',
       cell: ({ row }) => row.original.userCount,
       meta: { headerClassName: 'text-right w-24', cellClassName: 'text-right tabular-nums' },
     },
@@ -83,24 +83,24 @@ export function RolesTab() {
         <Alert className="flex-1">
           <Info />
           <AlertDescription>
-            Quyền hiệu lực của user = OR(quyền các role, quyền riêng). Role Admin có toàn quyền.
+            Quyền hiệu lực của người dùng = quyền của các vai trò + quyền riêng. Vai trò Admin có toàn quyền.
           </AlertDescription>
         </Alert>
         {canCreate && (
           <Button onClick={() => setDialog({ open: true, role: null })}>
-            <Plus /> Tạo role
+            <Plus /> Tạo vai trò
           </Button>
         )}
       </div>
-      <DataTable aria-label="Roles" columns={columns} data={data ?? []} getRowId={(r) => r.id} loading={isLoading} />
+      <DataTable aria-label="Vai trò" columns={columns} data={data ?? []} getRowId={(r) => r.id} loading={isLoading} />
       <RoleDialog open={dialog.open} role={dialog.role} onOpenChange={(open) => setDialog((d) => ({ ...d, open }))} />
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title={`Xóa role "${deleting?.name ?? ''}"?`}
+        title={`Xóa vai trò "${deleting?.name ?? ''}"?`}
         description={
           deleting?.userCount
-            ? `${deleting.userCount} user đang có role này sẽ mất quyền tương ứng.`
+            ? `${deleting.userCount} người dùng đang có vai trò này sẽ mất quyền tương ứng.`
             : 'Thao tác này không thể hoàn tác.'
         }
         confirmText="Xóa"

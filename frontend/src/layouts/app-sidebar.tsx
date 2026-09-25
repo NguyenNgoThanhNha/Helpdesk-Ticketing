@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
-import { BarChart3, FileClock, Headset, Inbox, LayoutDashboard, ListTodo, Settings } from 'lucide-react';
+import { FileClock, Headset, Inbox, LayoutDashboard, ListTodo, Settings } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -25,16 +25,16 @@ interface NavItem {
   anyOf: readonly PermissionRequirement[];
 }
 
+/** The dashboard also holds the reports (the former /reports page redirects there). */
 export const NAV_MAIN: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, anyOf: PERMISSIONS.dashboard },
-  { to: '/tickets', label: 'Tickets', icon: ListTodo, anyOf: [] },
-  { to: '/my-queue', label: 'My Queue', icon: Inbox, anyOf: PERMISSIONS.myQueue },
-  { to: '/reports', label: 'Reports', icon: BarChart3, anyOf: PERMISSIONS.dashboard },
+  { to: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard, anyOf: PERMISSIONS.dashboard },
+  { to: '/tickets', label: 'Danh sách ticket', icon: ListTodo, anyOf: [] },
+  { to: '/my-queue', label: 'Việc của tôi', icon: Inbox, anyOf: PERMISSIONS.myQueue },
 ];
 
 export const NAV_ADMIN: NavItem[] = [
-  { to: '/settings', label: 'Settings', icon: Settings, anyOf: PERMISSIONS.settings },
-  { to: '/api-logs', label: 'API Logs', icon: FileClock, anyOf: PERMISSIONS.apiLogs },
+  { to: '/settings', label: 'Cài đặt', icon: Settings, anyOf: PERMISSIONS.settings },
+  { to: '/api-logs', label: 'Nhật ký API', icon: FileClock, anyOf: PERMISSIONS.apiLogs },
 ];
 
 function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
@@ -85,7 +85,7 @@ export function AppSidebar() {
                 </span>
                 <span className="grid flex-1 text-left leading-tight">
                   <span className="truncate font-semibold">Helpdesk</span>
-                  <span className="truncate text-xs text-muted-foreground">Ticketing system</span>
+                  <span className="truncate text-xs text-muted-foreground">Hệ thống hỗ trợ</span>
                 </span>
               </Link>
             </SidebarMenuButton>

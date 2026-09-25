@@ -14,6 +14,9 @@ public static class ConstMessage
 public static class ConstCacheKey
 {
     public static string UserPermission(Guid userId, long version) => $"perm:{version}:{userId:N}";
+
+    /// <summary>Tiền tố cache báo cáo tổng hợp — key đầy đủ gồm khoảng ngày.</summary>
+    public const string ReportSummaryPrefix = "report:summary:";
 }
 
 public static class ConstPolicy

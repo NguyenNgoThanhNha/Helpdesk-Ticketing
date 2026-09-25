@@ -319,6 +319,17 @@ export interface NotificationDto {
   createdAt: string;
 }
 
+// ---- Realtime (SignalR hub /hubs/notifications) ----
+export type TicketChange = 'updated' | 'commented' | 'attachment' | 'sla';
+
+/** `ticketChanged` event, sent to clients that called `JoinTicket(ticketId)`. */
+export interface TicketChangedEvent {
+  ticketId: number;
+  change: TicketChange;
+  /** user who made the change; null = system (SLA job) */
+  actorId: string | null;
+}
+
 // ---- Reports ----
 export interface KeyCount {
   key: string;

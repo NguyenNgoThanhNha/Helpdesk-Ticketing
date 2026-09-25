@@ -9,7 +9,8 @@ import { TicketsByCategoryChart } from '../components/tickets-by-category-chart'
 import { TicketsByDayChart } from '../components/tickets-by-day-chart';
 import { useReportSummary } from '../hooks/use-report-summary';
 
-export function DashboardPage({ title = 'Dashboard' }: { title?: string }) {
+/** Dashboard = KPIs + reports (the former /reports page redirects here). */
+export function DashboardPage() {
   const [range, setRange] = useState<DateRangeValue>(() => lastDays(30));
   const params = { from: toApiDate(range.from), to: toApiDate(range.to) };
   const { data, isLoading } = useReportSummary(params);
@@ -17,8 +18,8 @@ export function DashboardPage({ title = 'Dashboard' }: { title?: string }) {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={title}
-        description="Số liệu ticket, SLA và hiệu suất xử lý"
+        title="Tổng quan"
+        description="Báo cáo ticket, SLA và hiệu suất xử lý"
         actions={<DateRangePicker value={range} onChange={(r) => r && setRange(r)} />}
       />
       <KpiCards data={data} loading={isLoading} />

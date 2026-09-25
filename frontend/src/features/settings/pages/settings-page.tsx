@@ -13,16 +13,16 @@ import { UsersTab } from '../users/components/users-tab';
 const TABS: { key: string; label: string; anyOf: readonly PermissionRequirement[]; render: () => ReactNode }[] = [
   {
     key: 'categories',
-    label: 'Categories',
+    label: 'Danh mục',
     anyOf: [
       ['CATEGORY', 'C'],
       ['CATEGORY', 'U'],
     ],
     render: () => <CategoriesTab />,
   },
-  { key: 'sla', label: 'SLA Policies', anyOf: [['SLA_POLICY', 'U']], render: () => <SlaPoliciesTab /> },
-  { key: 'users', label: 'Users', anyOf: [['USER', 'R']], render: () => <UsersTab /> },
-  { key: 'roles', label: 'Roles', anyOf: [['ROLE', 'R']], render: () => <RolesTab /> },
+  { key: 'sla', label: 'Chính sách SLA', anyOf: [['SLA_POLICY', 'U']], render: () => <SlaPoliciesTab /> },
+  { key: 'users', label: 'Người dùng', anyOf: [['USER', 'R']], render: () => <UsersTab /> },
+  { key: 'roles', label: 'Vai trò', anyOf: [['ROLE', 'R']], render: () => <RolesTab /> },
 ];
 
 export function SettingsPage() {
@@ -33,7 +33,7 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Settings" description="Danh mục, SLA, người dùng và phân quyền" />
+      <PageHeader title="Cài đặt" description="Danh mục, SLA, người dùng và phân quyền" />
       <Tabs value={active} onValueChange={(key) => setParams({ tab: key }, { replace: true })}>
         <TabsList className="max-w-full overflow-x-auto">
           {visible.map((t) => (

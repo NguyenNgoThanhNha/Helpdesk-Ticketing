@@ -39,7 +39,7 @@ describe('UsersTab', () => {
     const user = userEvent.setup();
     renderWithProviders(<UsersTab />);
 
-    await user.click(await screen.findByRole('switch', { name: 'Active an.agent@helpdesk.local' }));
+    await user.click(await screen.findByRole('switch', { name: 'Hoạt động: an.agent@helpdesk.local' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Khóa tài khoản An Agent?')).toBeInTheDocument();
     expect(api.patches).toHaveLength(0);
@@ -50,12 +50,12 @@ describe('UsersTab', () => {
     expect(api.patches).toHaveLength(0);
 
     // confirm → PATCH isActive=false
-    await user.click(screen.getByRole('switch', { name: 'Active an.agent@helpdesk.local' }));
+    await user.click(screen.getByRole('switch', { name: 'Hoạt động: an.agent@helpdesk.local' }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Khóa' }));
     await waitFor(() => expect(api.patches).toEqual([{ id: 'u-1', body: { isActive: false } }]));
 
     // unlocking is applied directly
-    await user.click(screen.getByRole('switch', { name: 'Active binh@helpdesk.local' }));
+    await user.click(screen.getByRole('switch', { name: 'Hoạt động: binh@helpdesk.local' }));
     await waitFor(() => expect(api.patches).toContainEqual({ id: 'u-2', body: { isActive: true } }));
   });
 
@@ -66,7 +66,7 @@ describe('UsersTab', () => {
     renderWithProviders(<UsersTab />);
     await screen.findByText('An Agent');
 
-    await user.type(screen.getByRole('textbox', { name: 'Tìm user' }), 'binh');
+    await user.type(screen.getByRole('textbox', { name: 'Tìm người dùng' }), 'binh');
     await waitFor(() => expect(api.searches).toContain('binh'));
     expect(api.searches.filter(Boolean)).toEqual(['binh']);
   });

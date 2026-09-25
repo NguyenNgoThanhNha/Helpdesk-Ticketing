@@ -2,6 +2,7 @@ using System.Collections;
 using Helpdesk.Application.Common.Data;
 using Helpdesk.Application.Features.V1.Tickets.DTOs;
 using Helpdesk.Application.Features.V1.Tickets.Services;
+using Helpdesk.Domain.Common;
 using Helpdesk.Domain.Rules;
 
 namespace Helpdesk.Application.Features.V1.Tickets.Queries.SearchTickets;
@@ -41,7 +42,7 @@ public sealed class SearchTicketsQueryHandler(
         var (assigneeId, unassigned) = ParseAssignee(q.AssigneeId);
         var (sortColumn, sortDesc) = ParseSort(q.Sort);
 
-        var ds = unitOfWork.ExecuteStoreProcedureGetMultiTables("[dbo].[usp_Ticket_Search]", new Hashtable
+        var ds = (await unitOfWork.ExecuteStoreProcedureGetMultiTablesAsync("[dbo].[usp_Ticket_Search]", new Hashtable
         {
             ["@ViewerId"] = currentUser.UserId,
             ["@CanViewAll"] = canViewAll,
@@ -51,6 +52,7 @@ public sealed class SearchTicketsQueryHandler(
             ["@AssigneeId"] = assigneeId,
             ["@Unassigned"] = unassigned,
             ["@SearchText"] = searchText,
+            ["@SearchNorm"] = searchText is null ? null : SearchNormalizer.Normalize(searchText), // khớp cột SearchText (BIN2, không dấu)
             ["@SearchId"] = searchId,
             ["@SearchIdOrTitle"] = idOrTitle,
             ["@SlaState"] = q.SlaState is { } sla ? (int)sla : null,
@@ -60,7 +62,7 @@ public sealed class SearchTicketsQueryHandler(
             ["@SortDesc"] = sortDesc,
             ["@PageNumber"] = q.SafePage,
             ["@PageSize"] = q.SafePageSize
-        }).ToDataSetSimpleRead();
+        }, ct)).ToDataSetSimpleRead();
 
         var totalCount = ds.TryRead<int>()?.FirstOrDefault() ?? 0;
         var rows = ds.TryRead<TicketRow>() ?? [];

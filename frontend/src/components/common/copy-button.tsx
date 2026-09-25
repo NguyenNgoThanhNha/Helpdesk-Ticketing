@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { copyToClipboard } from '@/lib/api-errors';
 
-export function CopyButton({ value, label = 'Copy', className }: { value: string; label?: string; className?: string }) {
+export function CopyButton({ value, label = 'Sao chép', className }: { value: string; label?: string; className?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <Button
@@ -16,7 +16,7 @@ export function CopyButton({ value, label = 'Copy', className }: { value: string
       onClick={() =>
         void copyToClipboard(value).then((ok) => {
           if (!ok) {
-            toast.error('Không copy được');
+            toast.error('Không sao chép được');
             return;
           }
           setCopied(true);
@@ -25,7 +25,7 @@ export function CopyButton({ value, label = 'Copy', className }: { value: string
       }
     >
       {copied ? <Check /> : <Copy />}
-      {copied ? 'Đã copy' : label}
+      {copied ? 'Đã sao chép' : label}
     </Button>
   );
 }

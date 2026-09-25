@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { createBrowserRouter, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
 import { AppLayout } from '@/layouts/app-layout';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from '@/features/auth';
@@ -38,11 +38,10 @@ export const routes: RouteObject[] = [
           { path: '/tickets/:id', element: <TicketDetailPage /> },
           {
             element: <PermissionRoute anyOf={PERMISSIONS.dashboard} />,
-            children: [
-              { path: '/dashboard', element: <DashboardPage /> },
-              { path: '/reports', element: <DashboardPage title="Reports" /> },
-            ],
+            children: [{ path: '/dashboard', element: <DashboardPage /> }],
           },
+          // reports were merged into the dashboard; keep old links / bookmarks working
+          { path: '/reports', element: <Navigate to="/dashboard" replace /> },
           {
             element: <PermissionRoute anyOf={PERMISSIONS.myQueue} />,
             children: [{ path: '/my-queue', element: <TicketListPage key="queue" mode="queue" /> }],

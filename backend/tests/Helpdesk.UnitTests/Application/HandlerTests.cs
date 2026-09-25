@@ -1,3 +1,4 @@
+using Helpdesk.Application.Common.Realtime;
 using Helpdesk.Application.Common.Exceptions;
 using Helpdesk.Application.Common.Interfaces;
 using Helpdesk.Application.Common.Security;
@@ -17,6 +18,8 @@ namespace Helpdesk.UnitTests.Application;
 
 public class HandlerTests
 {
+    private static RealtimeOutbox Outbox() => new(new NullRealtimePublisher(), NullLogger<RealtimeOutbox>.Instance);
+
     private static ICurrentUser UserWith(Guid id, params (string Code, PermissionFlags Flags)[] permissions)
     {
         var user = Substitute.For<ICurrentUser>();
@@ -47,7 +50,7 @@ public class HandlerTests
         var requester = db.AddUser("c@x.vn");
         var ticket = SeedTicket(db, requester.Id, DateTime.UtcNow);
         var handler = new UpdateTicketCommandHandler(db.UnitOfWork, UserWith(requester.Id), Substitute.For<IPermissionService>(),
-            new SlaCalculator(db.UnitOfWork), new TicketNotifier(db.UnitOfWork), Substitute.For<ITicketDetailReader>(), TimeProvider.System);
+            new SlaCalculator(db.UnitOfWork), new TicketNotifier(db.UnitOfWork, Outbox()), Substitute.For<ITicketDetailReader>(), Outbox(), TimeProvider.System);
 
         await Assert.ThrowsAsync<ForbiddenException>(() =>
             handler.Handle(new UpdateTicketCommand("AA==", null, TicketPriority.Low, null) { Id = ticket.Id }, default));
@@ -61,7 +64,7 @@ public class HandlerTests
         var ticket = SeedTicket(db, Guid.NewGuid(), DateTime.UtcNow);
         var user = UserWith(agent.Id, (ConstActivity.Ticket, new PermissionFlags(false, true, true, false)));
         var handler = new UpdateTicketCommandHandler(db.UnitOfWork, user, Substitute.For<IPermissionService>(),
-            new SlaCalculator(db.UnitOfWork), new TicketNotifier(db.UnitOfWork), Substitute.For<ITicketDetailReader>(), TimeProvider.System);
+            new SlaCalculator(db.UnitOfWork), new TicketNotifier(db.UnitOfWork, Outbox()), Substitute.For<ITicketDetailReader>(), Outbox(), TimeProvider.System);
 
         var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
             handler.Handle(new UpdateTicketCommand("AA==", TicketStatus.Closed, null, null) { Id = ticket.Id }, default));
@@ -79,7 +82,7 @@ public class HandlerTests
         db.Context.SaveChanges();
         clock.Advance(TimeSpan.FromHours(2));
 
-        var result = await new ScanSlaCommandHandler(db.UnitOfWork, new TicketNotifier(db.UnitOfWork), clock,
+        var result = await new ScanSlaCommandHandler(db.UnitOfWork, new TicketNotifier(db.UnitOfWork, Outbox()), Outbox(), clock,
             NullLogger<ScanSlaCommandHandler>.Instance).Handle(new ScanSlaCommand(), default);
 
         Assert.Equal(1, result.Breached);

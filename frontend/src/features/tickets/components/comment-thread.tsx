@@ -87,7 +87,7 @@ export function CommentThread({ ticket }: { ticket: TicketDetailDto }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Conversation ({ticket.comments.length})</CardTitle>
+          <CardTitle>Trao đổi ({ticket.comments.length})</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {ticket.comments.length === 0 ? (

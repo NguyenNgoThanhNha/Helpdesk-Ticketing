@@ -9,9 +9,9 @@ import { getStatus, showError } from '@/lib/api-errors';
 import type { UpdateTicketRequest } from '@/types';
 import { CommentThread } from '../components/comment-thread';
 import { HistoryTimeline } from '../components/history-timeline';
-import { PriorityBadge } from '../components/priority-badge';
-import { StatusBadge } from '../components/status-badge';
+import { TicketActions } from '../components/ticket-actions';
 import { TicketSidebar } from '../components/ticket-sidebar';
+import { useTicketRealtime } from '../hooks/use-ticket-realtime';
 import { useTicket, useTicketHistory, useUpdateTicket } from '../hooks/use-tickets';
 
 export const CONFLICT_MESSAGE = 'Ticket đã được người khác cập nhật, đang tải lại';
@@ -28,11 +28,13 @@ export function TicketDetailPage() {
   const from = (useLocation().state as { from?: unknown } | null)?.from;
   const backTo = typeof from === 'string' && from.startsWith('/') ? from : '/tickets';
   const id = Number(idParam);
+  const validId = Number.isInteger(id) && id > 0;
 
   const ticketQuery = useTicket(id);
   const historyQuery = useTicketHistory(id);
   const update = useUpdateTicket(id);
   const ticket = ticketQuery.data;
+  useTicketRealtime(id, validId);
 
   const patch = (changes: Omit<UpdateTicketRequest, 'rowVersion'>) => {
     if (!ticket) return;
@@ -53,7 +55,7 @@ export function TicketDetailPage() {
     );
   };
 
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!validId) {
     return <EmptyState icon={<FileQuestion />} title="Ticket không hợp lệ" action={backToList} />;
   }
   if (ticketQuery.isLoading) {
@@ -89,25 +91,27 @@ export function TicketDetailPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="icon" aria-label="Quay lại danh sách" asChild>
-          <Link to={backTo}>
-            <ArrowLeft />
-          </Link>
-        </Button>
-        <h1 className="min-w-0 text-xl font-semibold tracking-tight break-words">
-          Ticket #{ticket.id} — {ticket.title}
-        </h1>
-        <StatusBadge status={ticket.status} />
-        <PriorityBadge priority={ticket.priority} />
-      </div>
+      {/* title + actions ("[Assign▾][Status▾]" in the wireframe); the actions wrap under the title when space runs out */}
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-[1_1_20rem] items-start gap-2">
+          <Button variant="outline" size="icon" aria-label="Quay lại danh sách" className="shrink-0" asChild>
+            <Link to={backTo}>
+              <ArrowLeft />
+            </Link>
+          </Button>
+          <h1 className="min-w-0 pt-1 text-xl font-semibold tracking-tight break-words">
+            Ticket #{ticket.id} — {ticket.title}
+          </h1>
+        </div>
+        <TicketActions ticket={ticket} pending={update.isPending} onPatch={patch} />
+      </header>
 
       <div className="grid items-start gap-4 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2">
           <CommentThread ticket={ticket} />
         </div>
         <div className="min-w-0 space-y-4">
-          <TicketSidebar ticket={ticket} pending={update.isPending} onPatch={patch} />
+          <TicketSidebar ticket={ticket} />
           <HistoryTimeline items={historyQuery.data} loading={historyQuery.isLoading} />
         </div>
       </div>

@@ -59,7 +59,7 @@ export function LoginPage() {
             required
             type="email"
             autoComplete="email"
-            placeholder="you@company.com"
+            placeholder="ten@congty.vn"
           />
           <TextFormField
             control={form.control}

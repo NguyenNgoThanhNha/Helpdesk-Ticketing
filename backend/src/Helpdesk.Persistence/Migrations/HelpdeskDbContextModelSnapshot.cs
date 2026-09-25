@@ -78,6 +78,8 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
+
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
@@ -138,6 +140,8 @@ namespace Helpdesk.Persistence.Migrations
                         .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
 
                     b.ToTable("Sys_Activity", (string)null);
                 });
@@ -259,9 +263,17 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
+
                     b.HasIndex("TicketId");
 
+                    b.HasIndex("UserId", "CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "CreatedDate"), new[] { "IsDeleted", "IsRead" });
+
                     b.HasIndex("UserId", "IsRead");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "IsRead"), new[] { "IsDeleted" });
 
                     b.ToTable("Sys_Notification", (string)null);
                 });
@@ -315,6 +327,10 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
+
+                    b.HasIndex("ExpiresAt");
+
                     b.HasIndex("TokenHash")
                         .IsUnique();
 
@@ -367,6 +383,8 @@ namespace Helpdesk.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
 
                     b.HasIndex("Name")
                         .IsUnique()
@@ -432,6 +450,8 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
+
                     b.HasIndex("RoleId", "ActivityId")
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
@@ -496,6 +516,8 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
+
                     b.HasIndex("UserId", "ActivityId")
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
@@ -545,6 +567,8 @@ namespace Helpdesk.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
 
                     b.HasIndex("RoleId");
 
@@ -616,6 +640,8 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
+
                     b.HasIndex("TicketId");
 
                     b.ToTable("Attachments", (string)null);
@@ -663,6 +689,8 @@ namespace Helpdesk.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
 
                     b.HasIndex("Name")
                         .IsUnique()
@@ -719,7 +747,11 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
+
                     b.HasIndex("TicketId", "CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TicketId", "CreatedDate"), new[] { "IsDeleted" });
 
                     b.ToTable("Comments", (string)null);
                 });
@@ -767,6 +799,8 @@ namespace Helpdesk.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
 
                     b.HasIndex("Priority")
                         .IsUnique()
@@ -834,6 +868,10 @@ namespace Helpdesk.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<string>("SearchText")
+                        .HasColumnType("nvarchar(max)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
                     b.Property<DateTime?>("SlaWarningSentAt")
                         .HasColumnType("datetime2");
 
@@ -859,17 +897,25 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("CreatedById");
-
                     b.HasIndex("CreatedDate");
 
-                    b.HasIndex("Status");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
 
                     b.HasIndex("AssigneeId", "Status");
 
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("AssigneeId", "Status"), new[] { "CreatedDate", "IsDeleted" });
 
-                    b.HasIndex("Status", "ResolveDueAt");
+                    b.HasIndex("CreatedById", "CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedById", "CreatedDate"), new[] { "IsDeleted" });
+
+                    b.HasIndex("IsSlaBreached", "ResolveDueAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("IsSlaBreached", "ResolveDueAt"), new[] { "Status", "IsDeleted", "SlaWarningSentAt" });
+
+                    b.HasIndex("Status", "CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Status", "CreatedDate"), new[] { "IsDeleted" });
 
                     b.ToTable("Tickets", (string)null);
                 });
@@ -926,7 +972,11 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "IsDeleted" });
+
                     b.HasIndex("TicketId", "CreatedDate");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TicketId", "CreatedDate"), new[] { "IsDeleted" });
 
                     b.ToTable("TicketHistories", (string)null);
                 });

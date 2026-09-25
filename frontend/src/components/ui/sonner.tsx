@@ -36,7 +36,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
+      containerAriaLabel="Thông báo nhanh"
       toastOptions={{
+        closeButtonAriaLabel: "Đóng thông báo",
         classNames: {
           toast: "cn-toast",
         },

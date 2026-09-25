@@ -1,3 +1,4 @@
+using Helpdesk.Application.Common.Realtime;
 using FluentValidation;
 using Helpdesk.Application.Features.V1.Tickets.DTOs;
 using Helpdesk.Application.Features.V1.Tickets.Services;
@@ -29,7 +30,8 @@ public sealed class UploadAttachmentCommandValidator : AbstractValidator<UploadA
 public sealed class UploadAttachmentCommandHandler(
     IUnitOfWork<HelpdeskDbContext> unitOfWork,
     ICurrentUser currentUser,
-    IFileStorage storage) : IRequestHandler<UploadAttachmentCommand, AttachmentDto>
+    IFileStorage storage,
+    IRealtimeOutbox realtime) : IRequestHandler<UploadAttachmentCommand, AttachmentDto>
 {
     public async Task<AttachmentDto> Handle(UploadAttachmentCommand request, CancellationToken ct)
     {
@@ -53,6 +55,7 @@ public sealed class UploadAttachmentCommandHandler(
             request.Size, path);
         unitOfWork.Repository<Attachment>().Add(attachment);
         await unitOfWork.SaveChangesAsync(ct);
+        realtime.TicketChanged(request.TicketId, TicketChangeKind.Attachment, currentUser.UserId);
 
         return new AttachmentDto(attachment.Id, attachment.FileName, attachment.ContentType, attachment.Size,
             attachment.CommentId, attachment.CreatedDate);

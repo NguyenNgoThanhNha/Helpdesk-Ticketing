@@ -20,6 +20,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
+        services.AddHybridCache(); // L1 in-memory, chống stampede; thêm AddStackExchangeRedisCache để có L2 khi chạy nhiều instance
 
         // --- Data: DbContext + audit interceptor + UnitOfWork (open generic, Scoped — chuẩn BE §5) ---
         services.AddScoped<AuditSaveChangesInterceptor>();
@@ -56,6 +57,8 @@ public static class DependencyInjection
             services.AddHostedService<ApiLogWriterService>();
             services.AddHostedService<ApiLogCleanupService>();
             services.AddHostedService<SlaMonitorService>();
+            services.AddHostedService<DataRetentionService>();
+            services.AddHostedService<SearchTextBackfillService>();
         }
 
         return services;

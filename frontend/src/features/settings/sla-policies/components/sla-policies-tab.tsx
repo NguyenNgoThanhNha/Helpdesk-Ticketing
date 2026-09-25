@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/common/data-table';
 import { PriorityBadge } from '@/features/tickets';
+import { priorityLabel } from '@/lib/labels';
 import { TICKET_PRIORITIES, type SlaPolicyDto, type TicketPriority } from '@/types';
 import { useSlaPolicies, useUpdateSlaPolicy } from '../hooks/use-sla-policies';
 
@@ -53,7 +54,7 @@ export function SlaPoliciesTab() {
       type="number"
       min={0.5}
       step={0.5}
-      aria-label={`${label} ${p.priority}`}
+      aria-label={`${label} (${priorityLabel(p.priority)})`}
       className="w-28"
       value={draft[p.priority]?.[field] ?? ''}
       onChange={(e) => setField(p.priority, field, e.target.value)}
@@ -61,9 +62,9 @@ export function SlaPoliciesTab() {
   );
 
   const columns: ColumnDef<SlaPolicyDto>[] = [
-    { id: 'priority', header: 'Priority', cell: ({ row }) => <PriorityBadge priority={row.original.priority} /> },
-    { id: 'response', header: 'Phản hồi (giờ)', cell: ({ row }) => hoursInput(row.original, 'responseHours', 'Response hours') },
-    { id: 'resolve', header: 'Giải quyết (giờ)', cell: ({ row }) => hoursInput(row.original, 'resolveHours', 'Resolve hours') },
+    { id: 'priority', header: 'Ưu tiên', cell: ({ row }) => <PriorityBadge priority={row.original.priority} /> },
+    { id: 'response', header: 'Phản hồi (giờ)', cell: ({ row }) => hoursInput(row.original, 'responseHours', 'Số giờ phản hồi') },
+    { id: 'resolve', header: 'Giải quyết (giờ)', cell: ({ row }) => hoursInput(row.original, 'resolveHours', 'Số giờ giải quyết') },
     {
       id: 'actions',
       header: '',
@@ -104,7 +105,7 @@ export function SlaPoliciesTab() {
         <Info />
         <AlertDescription>Thời hạn SLA áp dụng cho ticket mới theo mức ưu tiên.</AlertDescription>
       </Alert>
-      <DataTable aria-label="SLA policies" columns={columns} data={rows} getRowId={(p) => p.priority} loading={isLoading} />
+      <DataTable aria-label="Chính sách SLA" columns={columns} data={rows} getRowId={(p) => p.priority} loading={isLoading} />
     </div>
   );
 }

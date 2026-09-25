@@ -64,11 +64,11 @@ describe('PermissionMatrix', () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<Harness initial={[{ activityId: 'act-ticket', c: true, r: false, u: false, d: false }]} onChange={onChange} />);
-    expect(screen.getByLabelText('TICKET all')).toHaveAttribute('aria-checked', 'mixed');
-    await user.click(screen.getByLabelText('TICKET all'));
+    expect(screen.getByLabelText('TICKET tất cả')).toHaveAttribute('aria-checked', 'mixed');
+    await user.click(screen.getByLabelText('TICKET tất cả'));
     expect(onChange).toHaveBeenLastCalledWith([{ activityId: 'act-ticket', c: true, r: true, u: true, d: true }]);
-    expect(screen.getByLabelText('TICKET all')).toBeChecked();
-    await user.click(screen.getByLabelText('TICKET all'));
+    expect(screen.getByLabelText('TICKET tất cả')).toBeChecked();
+    await user.click(screen.getByLabelText('TICKET tất cả'));
     expect(onChange).toHaveBeenLastCalledWith([{ activityId: 'act-ticket', c: false, r: false, u: false, d: false }]);
   });
 
@@ -82,7 +82,7 @@ describe('PermissionMatrix', () => {
     );
     expect(screen.getByLabelText('REPORT R')).toBeChecked();
     expect(screen.getByLabelText('REPORT R')).toBeDisabled();
-    expect(screen.queryByLabelText('REPORT all')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('REPORT tất cả')).not.toBeInTheDocument();
     expect(screen.queryByText('Tất cả')).not.toBeInTheDocument();
   });
 

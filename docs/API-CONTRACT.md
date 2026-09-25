@@ -246,6 +246,35 @@ ApiLogListItemDto = { id: number; module: string; traceId: string; ip: string | 
 ApiLogDetailDto = ApiLogListItemDto & { request: string | null; response: string | null; userAgent: string | null }
 ```
 
+## Realtime — SignalR
+
+Hub: **`/hubs/notifications`** (WebSocket, tự fallback SSE/long-polling). Xác thực: `accessTokenFactory` → token gửi qua query `access_token` (chỉ chấp nhận trên path `/hubs/*`).
+Qua proxy: Vite `/hubs` (bật `ws: true`), nginx `location /hubs/` (header `Upgrade`/`Connection`).
+
+**Server → client**
+
+| Event | Gửi tới | Payload |
+|---|---|---|
+| `notification` | đúng người nhận | `NotificationDto` (như `GET /notifications`) |
+| `ticketChanged` | client đã `JoinTicket(id)` | `{ ticketId: number; change: 'updated' \| 'commented' \| 'attachment' \| 'sla'; actorId: string \| null }` |
+
+**Client → server**
+
+| Method | Ý nghĩa |
+|---|---|
+| `JoinTicket(ticketId: number)` | Nhận `ticketChanged` của ticket đang mở. Server kiểm tra quyền xem (chủ ticket hoặc `TICKET:R`); không đủ quyền → `HubException("forbidden")` |
+| `LeaveTicket(ticketId: number)` | Thôi nhận |
+
+Hành vi FE khuyến nghị:
+- `notification`: tăng số chưa đọc, chèn vào đầu danh sách, hiện toast có link tới ticket.
+- `ticketChanged` với `actorId` khác user hiện tại: invalidate chi tiết và lịch sử ticket.
+- Khi đang kết nối: giảm polling `unread-count` xuống 5 phút. Khi mất kết nối: về lại 30 giây.
+- `withAutomaticReconnect`. Khi kết nối lại: refetch thông báo.
+
+## Tìm kiếm ticket (`search`)
+- `#123` → đúng mã. `123` → mã hoặc chữ trong tiêu đề/mô tả.
+- Chữ: **không phân biệt hoa thường và dấu tiếng Việt** ("hoa don" khớp "Hóa đơn", "dang nhap" khớp "đăng nhập"), khớp chuỗi con trong tiêu đề hoặc mô tả.
+
 ## Tài khoản seed (Development)
 | Email | Mật khẩu | Role |
 |---|---|---|

@@ -1,3 +1,4 @@
+using Helpdesk.Application.Common.Realtime;
 using Helpdesk.Domain.Entities.Sys;
 using Helpdesk.Domain.Entities.Tickets;
 
@@ -39,7 +40,7 @@ public interface ITicketNotifier
     Task NotifyAdminsAsync(Guid? actorId, Ticket ticket, string message, CancellationToken ct);
 }
 
-public sealed class TicketNotifier(IUnitOfWork<HelpdeskDbContext> unitOfWork) : ITicketNotifier
+public sealed class TicketNotifier(IUnitOfWork<HelpdeskDbContext> unitOfWork, IRealtimeOutbox realtime) : ITicketNotifier
 {
     public void Notify(IEnumerable<Guid?> recipients, Guid? actorId, Ticket ticket, string message)
     {
@@ -49,12 +50,16 @@ public sealed class TicketNotifier(IUnitOfWork<HelpdeskDbContext> unitOfWork) : 
             .Distinct();
 
         foreach (var userId in targets)
-            unitOfWork.Repository<SysNotification>().Add(new SysNotification
+        {
+            var notification = new SysNotification
             {
                 UserId = userId,
                 Message = message,
                 Ticket = ticket // navigation → EF tự điền TicketId kể cả khi ticket mới tạo
-            });
+            };
+            unitOfWork.Repository<SysNotification>().Add(notification);
+            realtime.Enqueue(notification); // đẩy qua SignalR sau khi SaveChanges thành công
+        }
     }
 
     public async Task NotifyAdminsAsync(Guid? actorId, Ticket ticket, string message, CancellationToken ct)

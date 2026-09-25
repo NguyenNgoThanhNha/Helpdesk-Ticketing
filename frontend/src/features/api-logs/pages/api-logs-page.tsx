@@ -21,7 +21,7 @@ const columns: ColumnDef<ApiLogListItemDto>[] = [
     header: 'Thời gian',
     cell: ({ row }) => <span className="whitespace-nowrap tabular-nums">{formatDateTimeSeconds(row.original.createdDate)}</span>,
   },
-  { id: 'method', header: 'Method', cell: ({ row }) => <MethodBadge method={row.original.method} /> },
+  { id: 'method', header: 'Phương thức', cell: ({ row }) => <MethodBadge method={row.original.method} /> },
   {
     id: 'url',
     header: 'URL',
@@ -31,7 +31,7 @@ const columns: ColumnDef<ApiLogListItemDto>[] = [
       </code>
     ),
   },
-  { id: 'statusCode', header: 'Status', cell: ({ row }) => <StatusCodeBadge code={row.original.statusCode} /> },
+  { id: 'statusCode', header: 'Mã trạng thái', cell: ({ row }) => <StatusCodeBadge code={row.original.statusCode} /> },
   {
     id: 'duration',
     header: 'Thời lượng',
@@ -40,7 +40,7 @@ const columns: ColumnDef<ApiLogListItemDto>[] = [
   },
   {
     id: 'user',
-    header: 'User',
+    header: 'Người dùng',
     cell: ({ row }) => row.original.userName ?? <span className="text-muted-foreground">—</span>,
   },
   {
@@ -64,8 +64,8 @@ export function ApiLogsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="API Logs"
-        description="Log request/response của API để debug; traceId trùng với traceId trong thông báo lỗi."
+        title="Nhật ký API"
+        description="Request / response của API để gỡ lỗi; traceId trùng với traceId trong thông báo lỗi."
         actions={
           <Button variant="outline" size="icon" aria-label="Tải lại" onClick={() => void logs.refetch()}>
             <RefreshCw className={cn(logs.isFetching && 'animate-spin')} />
@@ -76,14 +76,14 @@ export function ApiLogsPage() {
         <CardContent className="space-y-4">
           <ApiLogFilters filters={filters} onChange={updateParams} />
           <DataTable
-            aria-label="API logs"
+            aria-label="Nhật ký API"
             columns={columns}
             data={logs.data?.items ?? []}
             getRowId={(l) => String(l.id)}
             loading={logs.isFetching}
             onRowClick={(l) => setSelectedId(l.id)}
-            emptyText="Không có log nào"
-            error={logs.isError ? 'Không tải được API logs' : undefined}
+            emptyText="Không có nhật ký nào"
+            error={logs.isError ? 'Không tải được nhật ký API' : undefined}
             onRetry={() => void logs.refetch()}
             pagination={{
               page: filters.page,

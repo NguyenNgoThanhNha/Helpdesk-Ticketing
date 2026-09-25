@@ -26,7 +26,8 @@ public sealed class ApiLoggingOptions
     public int MaxBodyLength { get; set; } = 32 * 1024;
     public int RetentionDays { get; set; } = 30;
     public int QueueCapacity { get; set; } = 10_000;
-    public string[] ExcludedPaths { get; set; } = ["/health", "/swagger", "/api/v1/api-logs"];
+    /// <summary>"/hubs": SignalR gửi access_token trên query string — không được ghi vào log.</summary>
+    public string[] ExcludedPaths { get; set; } = ["/health", "/swagger", "/api/v1/api-logs", "/hubs"];
 
     public string[] SensitiveFields { get; set; } =
         ["password", "newPassword", "currentPassword", "accessToken", "refreshToken", "token"];

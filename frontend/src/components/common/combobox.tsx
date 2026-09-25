@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChevronsUpDown, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,7 @@ export function Combobox({
   emptyText = 'Không có kết quả',
   allowClear,
   clearLabel = 'Bỏ chọn',
+  prefix,
   disabled,
   loading,
   className,
@@ -49,6 +50,8 @@ export function Combobox({
   onChange: (value: string | undefined) => void;
   allowClear?: boolean;
   clearLabel?: string;
+  /** visual label shown before the value inside the trigger (the accessible name stays `aria-label`) */
+  prefix?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
@@ -65,7 +68,10 @@ export function Combobox({
           disabled={disabled}
           className={cn('w-full justify-between font-normal', !selected && 'text-muted-foreground', className)}
         >
-          <span className="truncate">{selected?.label ?? placeholder}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            {prefix && <span className="shrink-0 text-muted-foreground">{prefix}</span>}
+            <span className="truncate">{selected?.label ?? placeholder}</span>
+          </span>
           {loading ? <Loader2 className="animate-spin" /> : <ChevronsUpDown className="opacity-50" />}
         </Button>
       </PopoverTrigger>

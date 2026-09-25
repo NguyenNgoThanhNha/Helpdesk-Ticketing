@@ -51,16 +51,16 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-/** Toast options that show the traceId and a "Copy traceId" action. */
+/** Toast options that show the traceId and a "Sao chép traceId" action. */
 export function traceIdToastOptions(traceId: string | undefined) {
   if (!traceId) return {};
   return {
     description: `traceId: ${traceId}`,
     action: {
-      label: 'Copy traceId',
+      label: 'Sao chép traceId',
       onClick: () => {
         void copyToClipboard(traceId).then((ok) => {
-          if (ok) toast.success('Đã copy traceId');
+          if (ok) toast.success('Đã sao chép traceId');
         });
       },
     },

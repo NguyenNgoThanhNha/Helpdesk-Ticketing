@@ -1,3 +1,4 @@
+using Helpdesk.Application.Common.Realtime;
 using Helpdesk.Application.Features.V1.Tickets.Services;
 using Helpdesk.Domain.Entities.Tickets;
 using Helpdesk.Domain.Rules;
@@ -13,6 +14,7 @@ public sealed record ScanSlaCommand(int BatchSize = 200) : IRequest<ScanSlaResul
 public sealed class ScanSlaCommandHandler(
     IUnitOfWork<HelpdeskDbContext> unitOfWork,
     ITicketNotifier notifier,
+    IRealtimeOutbox realtime,
     TimeProvider clock,
     ILogger<ScanSlaCommandHandler> logger) : IRequestHandler<ScanSlaCommand, ScanSlaResult>
 {
@@ -51,6 +53,7 @@ public sealed class ScanSlaCommandHandler(
         if (breached.Count + atRisk.Count > 0)
         {
             await unitOfWork.SaveChangesAsync(ct);
+            foreach (var ticket in breached) realtime.TicketChanged(ticket.Id, TicketChangeKind.Sla, null);
             logger.LogInformation("SLA scan: {Breached} breached, {Warned} at-risk warnings", breached.Count, atRisk.Count);
         }
 

@@ -14,6 +14,7 @@ public class SysRefreshTokenConfiguration : IEntityTypeConfiguration<SysRefreshT
         builder.Property(x => x.TokenHash).HasColumnType("varchar(64)").IsRequired();
         builder.Property(x => x.ReplacedByTokenHash).HasColumnType("varchar(64)");
         builder.HasIndex(x => x.TokenHash).IsUnique();
+        builder.HasIndex(x => x.ExpiresAt); // job dọn token hết hạn (DataRetention)
         builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }
@@ -25,7 +26,8 @@ public class SysNotificationConfiguration : IEntityTypeConfiguration<SysNotifica
         builder.ToTable(ConstTable.Notification);
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Message).HasMaxLength(500).IsRequired();
-        builder.HasIndex(x => new { x.UserId, x.IsRead });
+        builder.HasIndex(x => new { x.UserId, x.IsRead }).IncludeProperties(x => x.IsDeleted);            // đếm chưa đọc (polling)
+        builder.HasIndex(x => new { x.UserId, x.CreatedDate }).IncludeProperties(x => new { x.IsDeleted, x.IsRead }); // danh sách mới nhất
         builder.HasOne<SysAccount>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.Ticket).WithMany().HasForeignKey(x => x.TicketId).OnDelete(DeleteBehavior.SetNull);
     }

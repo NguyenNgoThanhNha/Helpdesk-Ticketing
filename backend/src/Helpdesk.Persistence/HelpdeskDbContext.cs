@@ -44,7 +44,8 @@ public class HelpdeskDbContext(DbContextOptions<HelpdeskDbContext> options) : Db
             var builder = modelBuilder.Entity(entityType.ClrType);
             builder.Property(nameof(BaseEntity.CreatedName)).HasMaxLength(100);
             builder.Property(nameof(BaseEntity.Updater)).HasMaxLength(100);
-            builder.HasIndex(nameof(BaseEntity.CreatedDate));
+            // INCLUDE IsDeleted để sort/phân trang theo CreatedDate không phải key lookup (RULES 4.10).
+            builder.HasIndex(nameof(BaseEntity.CreatedDate)).IncludeProperties(nameof(BaseEntity.IsDeleted));
 
             var parameter = Expression.Parameter(entityType.ClrType, "e");
             var notDeleted = Expression.Lambda(

@@ -5,16 +5,20 @@ import { cn } from '@/lib/utils';
 import type { AgentPerformanceDto } from '@/types';
 import { fmtHours, fmtPct } from '../format';
 
-function Meter({ value, className }: { value: number; className?: string }) {
+const TITLE = 'Hiệu suất nhân viên';
+
+function Meter({ value, label, className }: { value: number; label: string; className?: string }) {
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div className="flex items-center gap-2">
       <div
         className="h-2 w-24 overflow-hidden rounded-full bg-muted"
         role="progressbar"
+        aria-label={label}
         aria-valuenow={Math.round(pct)}
         aria-valuemin={0}
         aria-valuemax={100}
+        aria-valuetext={fmtPct(value)}
       >
         <div className={cn('h-full rounded-full bg-primary', className)} style={{ width: `${pct}%` }} />
       </div>
@@ -26,24 +30,33 @@ function Meter({ value, className }: { value: number; className?: string }) {
 const right = { headerClassName: 'text-right', cellClassName: 'text-right tabular-nums' };
 
 const columns: ColumnDef<AgentPerformanceDto>[] = [
-  { id: 'agentName', header: 'Agent', cell: ({ row }) => <span className="font-medium">{row.original.agentName}</span> },
+  { id: 'agentName', header: 'Nhân viên', cell: ({ row }) => <span className="font-medium">{row.original.agentName}</span> },
   { id: 'assigned', header: 'Được gán', cell: ({ row }) => row.original.assigned, meta: right },
   { id: 'resolved', header: 'Đã giải quyết', cell: ({ row }) => row.original.resolved, meta: right },
   {
     id: 'resolvedRate',
     header: 'Tỉ lệ giải quyết',
     cell: ({ row }) => (
-      <Meter value={row.original.assigned ? (row.original.resolved / row.original.assigned) * 100 : 0} />
+      <Meter
+        label={`Tỉ lệ giải quyết của ${row.original.agentName}`}
+        value={row.original.assigned ? (row.original.resolved / row.original.assigned) * 100 : 0}
+      />
     ),
   },
-  { id: 'avg', header: 'Avg resolution', cell: ({ row }) => fmtHours(row.original.avgResolutionHours), meta: right },
+  { id: 'avg', header: 'Thời gian xử lý TB', cell: ({ row }) => fmtHours(row.original.avgResolutionHours), meta: right },
   {
     id: 'sla',
-    header: 'SLA compliance',
+    header: 'Tỉ lệ đạt SLA',
     cell: ({ row }) => {
       const v = row.original.slaComplianceRate;
       if (v === null) return <span className="text-muted-foreground">—</span>;
-      return <Meter value={v} className={v >= 80 ? 'bg-emerald-500' : v >= 60 ? 'bg-amber-500' : 'bg-red-500'} />;
+      return (
+        <Meter
+          label={`Tỉ lệ đạt SLA của ${row.original.agentName}`}
+          value={v}
+          className={v >= 80 ? 'bg-emerald-500' : v >= 60 ? 'bg-amber-500' : 'bg-red-500'}
+        />
+      );
     },
   },
 ];
@@ -52,16 +65,16 @@ export function AgentPerformanceTable({ data, loading }: { data: AgentPerformanc
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Hiệu suất Agent</CardTitle>
+        <CardTitle>{TITLE}</CardTitle>
       </CardHeader>
       <CardContent>
         <DataTable
-          aria-label="Hiệu suất Agent"
+          aria-label={TITLE}
           columns={columns}
           data={data ?? []}
           getRowId={(r) => r.agentId}
           loading={loading}
-          emptyText="Chưa có dữ liệu agent"
+          emptyText="Chưa có dữ liệu nhân viên"
         />
       </CardContent>
     </Card>

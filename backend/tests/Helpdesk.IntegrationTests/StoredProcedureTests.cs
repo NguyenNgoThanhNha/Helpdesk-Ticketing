@@ -90,14 +90,17 @@ public class StoredProcedureTests(HelpdeskApiFactory factory)
         await SeedAsync();
         var admin = await factory.CreateClientForAsync("admin@helpdesk.local", "Admin@123");
 
-        var report = await GetAsync(admin, "/api/v1/reports/summary");
+        // Khoảng ngày riêng của test này: báo cáo được cache theo khoảng ngày, dùng khoảng mặc định có thể
+        // nhận kết quả do test khác lưu trước khi SeedAsync chạy.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var report = await GetAsync(admin, $"/api/v1/reports/summary?from={today.AddDays(-6):yyyy-MM-dd}&to={today:yyyy-MM-dd}");
 
         var total = report["totalTickets"]!.GetValue<int>();
         Assert.True(total >= 3);
         Assert.Equal(total, report["byStatus"]!.AsArray().Sum(s => s!["count"]!.GetValue<int>()));
         Assert.Equal(total, report["byCategory"]!.AsArray().Sum(s => s!["count"]!.GetValue<int>()));
         Assert.Equal(total, report["byDay"]!.AsArray().Sum(s => s!["count"]!.GetValue<int>()));
-        Assert.Equal(30, report["byDay"]!.AsArray().Count);
+        Assert.Equal(7, report["byDay"]!.AsArray().Count);
         Assert.NotEmpty(report["agentPerformance"]!.AsArray());
 
         var tooLong = await admin.GetAsync("/api/v1/reports/summary?from=2020-01-01&to=2026-01-01");

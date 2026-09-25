@@ -10,6 +10,8 @@ const API_PROXY_TARGET = process.env.API_PROXY_TARGET ?? 'http://localhost:5080'
 const proxy = {
   // trailing slash: must not swallow the SPA route /api-logs
   '/api/': { target: API_PROXY_TARGET, changeOrigin: true },
+  // SignalR hub (/hubs/notifications): negotiate over HTTP, then a WebSocket upgrade
+  '/hubs': { target: API_PROXY_TARGET, changeOrigin: true, ws: true },
 };
 
 /**
@@ -21,7 +23,7 @@ const proxy = {
 const CORE_VENDOR = /[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run[\\/]router)[\\/]/;
 /** Libraries the entry needs anyway (login / ticket list); split out only for long-term caching across deploys. */
 const APP_VENDOR =
-  /[\\/]node_modules[\\/](@tanstack[\\/](query-core|react-query|table-core|react-table)|axios|zod|react-hook-form|@hookform[\\/]resolvers|zustand|sonner)[\\/]/;
+  /[\\/]node_modules[\\/](@tanstack[\\/](query-core|react-query|table-core|react-table)|axios|zod|react-hook-form|@hookform[\\/]resolvers|zustand|sonner|@microsoft[\\/]signalr)[\\/]/;
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

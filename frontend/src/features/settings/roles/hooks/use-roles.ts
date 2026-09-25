@@ -40,7 +40,7 @@ export function useDeleteRole() {
   return useMutation({
     mutationFn: (id: string) => rolesApi.remove(id),
     onSuccess: () => {
-      toast.success('Đã xóa role');
+      toast.success('Đã xóa vai trò');
       void queryClient.invalidateQueries({ queryKey: queryKeys.roles });
       void queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },

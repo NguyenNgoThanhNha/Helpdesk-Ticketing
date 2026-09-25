@@ -42,6 +42,10 @@ public class Ticket : BaseEntity
 
     public byte[] RowVersion { get; private set; } = [];
 
+    /// <summary>Tiêu đề + mô tả đã chuẩn hóa (<see cref="SearchNormalizer"/>) — cột collation BIN2 phục vụ tìm kiếm.
+    /// Null với dữ liệu cũ chưa backfill (SP có fallback).</summary>
+    public string? SearchText { get; private set; }
+
     public IReadOnlyCollection<Comment> Comments => _comments;
     public IReadOnlyCollection<TicketHistory> History => _history;
 
@@ -61,11 +65,15 @@ public class Ticket : BaseEntity
             ResponseDueAt = now + sla.Response,
             ResolveDueAt = now + sla.Resolve
         };
+        ticket.SearchText = BuildSearchText(ticket.Title, ticket.Description);
         ticket.AddHistory(TicketHistory.Fields.Created, null, TicketStatus.New.ToString(), requesterId, now);
         return ticket;
     }
 
     public Guid RequesterId => CreatedById ?? Guid.Empty;
+
+    public static string BuildSearchText(string title, string description) =>
+        SearchNormalizer.Normalize($"{title} {description}");
 
     public bool IsActive => TicketStatusMachine.IsActive(Status);
 

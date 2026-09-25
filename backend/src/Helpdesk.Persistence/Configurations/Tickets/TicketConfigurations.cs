@@ -13,6 +13,8 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(x => x.Title).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(4000).IsRequired();
         builder.Property(x => x.RowVersion).IsRowVersion();
+        // So khớp nhị phân trên chuỗi đã chuẩn hóa (không dấu, chữ thường) → LIKE nhanh ~4x, tìm không cần gõ dấu.
+        builder.Property(x => x.SearchText).UseCollation("Latin1_General_100_BIN2");
 
         builder.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.CreatedBy).WithMany().HasForeignKey(x => x.CreatedById).OnDelete(DeleteBehavior.Restrict);
@@ -26,12 +28,18 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Ignore(x => x.RequesterId);
         builder.Ignore(x => x.IsActive);
 
-        builder.HasIndex(x => x.Status);
-        // Phủ cho auto-assign (đếm ticket đang mở theo agent) và My Queue (lọc AssigneeId, sort CreatedDate).
-        // PHẢI include IsDeleted: mọi query EF đều có "IsDeleted = 0" (global filter) — thiếu cột này SQL lại đi key lookup.
+        // Mọi index phục vụ query EF/SP đều INCLUDE IsDeleted (RULES 4.10): query luôn có "IsDeleted = 0",
+        // thiếu cột này SQL phải key lookup từng dòng hoặc bỏ index để quét cả bảng.
+
+        // Lọc theo trạng thái + sort mặc định theo ngày tạo.
+        builder.HasIndex(x => new { x.Status, x.CreatedDate }).IncludeProperties(x => x.IsDeleted);
+        // Auto-assign (đếm ticket đang mở theo agent) và My Queue (lọc AssigneeId, sort CreatedDate).
         builder.HasIndex(x => new { x.AssigneeId, x.Status }).IncludeProperties(x => new { x.CreatedDate, x.IsDeleted });
-        builder.HasIndex(x => x.CreatedById);
-        builder.HasIndex(x => new { x.Status, x.ResolveDueAt });
+        // Khách hàng xem ticket của mình, sort theo ngày tạo.
+        builder.HasIndex(x => new { x.CreatedById, x.CreatedDate }).IncludeProperties(x => x.IsDeleted);
+        // Job SLA (IsSlaBreached = 0 AND ResolveDueAt < now ORDER BY ResolveDueAt) và bộ lọc SLA sắp hết hạn.
+        builder.HasIndex(x => new { x.IsSlaBreached, x.ResolveDueAt })
+            .IncludeProperties(x => new { x.Status, x.IsDeleted, x.SlaWarningSentAt });
     }
 }
 
@@ -43,7 +51,7 @@ public class CommentConfiguration : IEntityTypeConfiguration<Comment>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Body).HasMaxLength(4000).IsRequired();
         builder.HasOne(x => x.Author).WithMany().HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(x => new { x.TicketId, x.CreatedDate });
+        builder.HasIndex(x => new { x.TicketId, x.CreatedDate }).IncludeProperties(x => x.IsDeleted); // đếm/đọc comment theo ticket
     }
 }
 
@@ -71,7 +79,7 @@ public class TicketHistoryConfiguration : IEntityTypeConfiguration<TicketHistory
         builder.Property(x => x.OldValue).HasMaxLength(200);
         builder.Property(x => x.NewValue).HasMaxLength(200);
         builder.HasOne(x => x.ChangedBy).WithMany().HasForeignKey(x => x.CreatedById).OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(x => new { x.TicketId, x.CreatedDate });
+        builder.HasIndex(x => new { x.TicketId, x.CreatedDate }).IncludeProperties(x => x.IsDeleted);
     }
 }
 

@@ -1,3 +1,4 @@
+using Helpdesk.Application.Common.Realtime;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using Helpdesk.Application.Features.V1.Tickets.DTOs;
@@ -42,6 +43,7 @@ public sealed class UpdateTicketCommandHandler(
     ISlaCalculator sla,
     ITicketNotifier notifier,
     ITicketDetailReader reader,
+    IRealtimeOutbox realtime,
     TimeProvider clock) : IRequestHandler<UpdateTicketCommand, TicketDetailDto>
 {
     public async Task<TicketDetailDto> Handle(UpdateTicketCommand request, CancellationToken ct)
@@ -92,6 +94,7 @@ public sealed class UpdateTicketCommandHandler(
             notifier.Notify([ticket.CreatedById, ticket.AssigneeId], actorId, ticket, $"Trạng thái đổi {oldStatus} → {ticket.Status}");
 
         await unitOfWork.SaveChangesAsync(ct); // DbUpdateConcurrencyException → 409 ở GlobalExceptionHandler
+        realtime.TicketChanged(ticket.Id, TicketChangeKind.Updated, actorId);
 
         return await reader.GetAsync(ticket.Id, ct);
     }

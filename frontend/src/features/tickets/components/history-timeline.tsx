@@ -3,21 +3,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/common/empty-state';
 import { formatDateTime } from '@/lib/date';
+import { priorityLabel, slaStateLabel, statusLabel } from '@/lib/labels';
 import type { TicketHistoryDto } from '@/types';
 
-export function historyText(h: TicketHistoryDto): ReactNode {
-  const arrow = (
+/** old → new, with enum values (status / priority / SLA state) shown by their Vietnamese label. */
+function Change({ h, label = (v) => v ?? '—' }: { h: TicketHistoryDto; label?: (v: string | null) => string }) {
+  return (
     <>
-      {h.oldValue ?? '—'} → <b>{h.newValue ?? '—'}</b>
+      {label(h.oldValue)} → <b>{label(h.newValue)}</b>
     </>
   );
+}
+
+export function historyText(h: TicketHistoryDto): ReactNode {
   switch (h.field) {
     case 'Created':
       return 'Tạo ticket';
     case 'Status':
-      return <>Đổi trạng thái: {arrow}</>;
+      return (
+        <>
+          Đổi trạng thái: <Change h={h} label={statusLabel} />
+        </>
+      );
     case 'Priority':
-      return <>Đổi ưu tiên: {arrow}</>;
+      return (
+        <>
+          Đổi ưu tiên: <Change h={h} label={priorityLabel} />
+        </>
+      );
     case 'Assignee':
       return h.newValue ? (
         <>
@@ -28,11 +41,15 @@ export function historyText(h: TicketHistoryDto): ReactNode {
         <>Bỏ gán {h.oldValue ?? ''}</>
       );
     case 'Sla':
-      return <>SLA: {arrow}</>;
+      return (
+        <>
+          SLA: <Change h={h} label={slaStateLabel} />
+        </>
+      );
     default:
       return (
         <>
-          {h.field}: {arrow}
+          {h.field}: <Change h={h} />
         </>
       );
   }
@@ -43,7 +60,7 @@ export function HistoryTimeline({ items, loading }: { items: TicketHistoryDto[] 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>History (audit)</CardTitle>
+        <CardTitle>Lịch sử thay đổi</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (

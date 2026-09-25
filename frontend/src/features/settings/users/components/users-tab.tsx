@@ -44,7 +44,7 @@ export function UsersTab() {
     { id: 'email', header: 'Email', cell: ({ row }) => row.original.email },
     {
       id: 'roles',
-      header: 'Roles',
+      header: 'Vai trò',
       cell: ({ row }) =>
         row.original.roles.length ? (
           <div className="flex flex-wrap gap-1">
@@ -55,18 +55,18 @@ export function UsersTab() {
             ))}
           </div>
         ) : (
-          <Badge variant="outline">Chưa có role</Badge>
+          <Badge variant="outline">Chưa có vai trò</Badge>
         ),
     },
     { id: 'createdDate', header: 'Ngày tạo', cell: ({ row }) => formatDate(row.original.createdDate) },
     {
       id: 'isActive',
-      header: 'Active',
+      header: 'Hoạt động',
       cell: ({ row }) => {
         const u = row.original;
         return (
           <Switch
-            aria-label={`Active ${u.email}`}
+            aria-label={`Hoạt động: ${u.email}`}
             checked={u.isActive}
             disabled={!canEdit || u.id === me?.id || pendingId === u.id}
             onCheckedChange={(checked) =>
@@ -84,7 +84,7 @@ export function UsersTab() {
         <div className="flex justify-end gap-2">
           {canEdit && (
             <Button variant="outline" size="sm" onClick={() => setRolesFor(row.original)}>
-              <Users /> Gán role
+              <Users /> Gán vai trò
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setPermsFor(row.original)}>
@@ -108,7 +108,7 @@ export function UsersTab() {
         >
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            aria-label="Tìm user"
+            aria-label="Tìm người dùng"
             placeholder="Tìm theo tên / email"
             className="pl-8"
             value={searchText}
@@ -122,12 +122,12 @@ export function UsersTab() {
           value={query.roleId ?? ALL}
           onValueChange={(v) => setQuery((q) => ({ ...q, roleId: v === ALL ? undefined : v, page: 1 }))}
         >
-          <SelectTrigger aria-label="Lọc theo role" className="w-44">
-            <SelectValue placeholder="Role" />
+          <SelectTrigger aria-label="Lọc theo vai trò" className="w-44">
+            <SelectValue placeholder="Vai trò" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>
-              <span className="text-muted-foreground">Role: tất cả</span>
+              <span className="text-muted-foreground">Vai trò: tất cả</span>
             </SelectItem>
             {(roles.data ?? []).map((r) => (
               <SelectItem key={r.id} value={r.id}>

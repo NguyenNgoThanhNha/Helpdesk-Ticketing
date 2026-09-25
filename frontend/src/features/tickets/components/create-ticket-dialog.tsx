@@ -70,7 +70,7 @@ export function CreateTicketDialog({ open, onOpenChange, onCreated }: Props) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl" onInteractOutside={(e) => submitting && e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>New Ticket</DialogTitle>
+          <DialogTitle>Tạo ticket mới</DialogTitle>
           <DialogDescription>Mô tả vấn đề bạn gặp phải, bộ phận hỗ trợ sẽ phản hồi sớm.</DialogDescription>
         </DialogHeader>
         <Form {...form}>

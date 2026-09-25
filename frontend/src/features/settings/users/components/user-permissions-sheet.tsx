@@ -43,7 +43,7 @@ export function UserPermissionsSheet({ user, onClose }: { user: UserListItemDto 
           {detail.data && (
             <>
               <div className="flex flex-wrap items-center gap-1.5 text-sm">
-                <span className="text-muted-foreground">Role:</span>
+                <span className="text-muted-foreground">Vai trò:</span>
                 {detail.data.roles.length
                   ? detail.data.roles.map((r) => (
                       <Badge key={r.id} variant="secondary">
@@ -55,13 +55,13 @@ export function UserPermissionsSheet({ user, onClose }: { user: UserListItemDto 
               {detail.data.isAdmin && (
                 <Alert>
                   <Info />
-                  <AlertDescription>Tài khoản có role Admin → toàn quyền, quyền riêng không có tác dụng.</AlertDescription>
+                  <AlertDescription>Tài khoản có vai trò Admin → toàn quyền, quyền riêng không có tác dụng.</AlertDescription>
                 </Alert>
               )}
               <Alert>
                 <TriangleAlert />
                 <AlertDescription>
-                  Quyền riêng được cộng thêm vào quyền của role. Cột “Quyền hiệu lực” là kết quả sau khi gộp (cập nhật sau khi
+                  Quyền riêng được cộng thêm vào quyền của các vai trò. Cột “Quyền hiệu lực” là kết quả sau khi gộp (cập nhật sau khi
                   Lưu).
                 </AlertDescription>
               </Alert>

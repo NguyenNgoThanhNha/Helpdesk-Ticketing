@@ -1,19 +1,25 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-client';
+import { useRealtimeStatus } from '@/lib/realtime';
 import type { NotificationDto } from '@/types';
 import { notificationsApi } from '../api/notifications-api';
 
+/** Unread-count polling without a live connection (disconnected / connecting / reconnecting). */
 export const UNREAD_POLL_INTERVAL = 30_000;
+/** While the hub is connected new notifications are pushed; polling is only a safety net. */
+export const UNREAD_POLL_INTERVAL_CONNECTED = 5 * 60_000;
 
 /**
- * Unread badge count, polled every 30s while the tab is visible. Polling pauses while the tab is hidden
- * (TanStack's focusManager follows `visibilitychange`), and the count is refreshed as soon as the user comes back.
+ * Unread badge count, polled while the tab is visible: every 5 minutes while the realtime connection is up (pushes
+ * keep it current), every 30s otherwise. Polling pauses while the tab is hidden (TanStack's focusManager follows
+ * `visibilitychange`), and the count is refreshed as soon as the user comes back.
  */
 export function useUnreadCount() {
+  const connected = useRealtimeStatus() === 'connected';
   return useQuery({
     queryKey: queryKeys.unreadCount,
     queryFn: notificationsApi.unreadCount,
-    refetchInterval: UNREAD_POLL_INTERVAL,
+    refetchInterval: connected ? UNREAD_POLL_INTERVAL_CONNECTED : UNREAD_POLL_INTERVAL,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: 'always',
     meta: { suppressGlobalError: true },

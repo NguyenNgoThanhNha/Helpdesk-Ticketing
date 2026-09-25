@@ -18,7 +18,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { useLogout, useSyncCurrentUser } from '@/features/auth';
-import { NotificationBell } from '@/features/notifications';
+import { NotificationBell, useRealtimeNotifications } from '@/features/notifications';
+import { SEARCH_PLACEHOLDER } from '@/features/tickets';
+import { useRealtimeConnection } from '@/lib/realtime';
 import { useAuthStore } from '@/stores/auth-store';
 import { AppSidebar } from './app-sidebar';
 
@@ -84,7 +86,7 @@ function GlobalSearch() {
   return (
     <form
       role="search"
-      className="relative w-full max-w-sm"
+      className="relative w-full max-w-md"
       onSubmit={(e) => {
         e.preventDefault();
         const q = value.trim();
@@ -94,7 +96,8 @@ function GlobalSearch() {
       <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         aria-label="Tìm ticket"
-        placeholder="Tìm ticket..."
+        placeholder={SEARCH_PLACEHOLDER}
+        title={SEARCH_PLACEHOLDER}
         className="pl-8"
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -103,9 +106,14 @@ function GlobalSearch() {
   );
 }
 
-/** Authenticated shell: collapsible shadcn Sidebar (off-canvas sheet on mobile) + topbar. */
+/**
+ * Authenticated shell: collapsible shadcn Sidebar (off-canvas sheet on mobile) + topbar.
+ * Also owns the realtime (SignalR) connection: open while signed in, closed on logout.
+ */
 export function AppLayout() {
   useSyncCurrentUser();
+  useRealtimeConnection();
+  useRealtimeNotifications();
   return (
     <SidebarProvider>
       <AppSidebar />

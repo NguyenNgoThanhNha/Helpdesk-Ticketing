@@ -46,12 +46,12 @@ export function ApiLogFilters({ filters, onChange }: { filters: Filters; onChang
         onChange={(e) => setUrl(e.target.value)}
       />
       <Select value={filters.method ?? ALL} onValueChange={(v) => onChange({ method: v === ALL ? undefined : v })}>
-        <SelectTrigger aria-label="Method" className="w-32">
-          <SelectValue placeholder="Method" />
+        <SelectTrigger aria-label="Phương thức" className="w-40">
+          <SelectValue placeholder="Phương thức" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>
-            <span className="text-muted-foreground">Method: tất cả</span>
+            <span className="text-muted-foreground">Phương thức: tất cả</span>
           </SelectItem>
           {API_LOG_METHODS.map((m) => (
             <SelectItem key={m} value={m}>
@@ -61,13 +61,13 @@ export function ApiLogFilters({ filters, onChange }: { filters: Filters; onChang
         </SelectContent>
       </Select>
       <Input
-        aria-label="Status code"
-        placeholder="Status code"
+        aria-label="Mã trạng thái"
+        placeholder="Mã trạng thái"
         inputMode="numeric"
         type="number"
         min={100}
         max={599}
-        className="w-32"
+        className="w-36"
         value={statusCode}
         onChange={(e) => setStatusCode(e.target.value)}
       />
@@ -89,7 +89,7 @@ export function ApiLogFilters({ filters, onChange }: { filters: Filters; onChang
             onChange({ traceId: undefined, url: undefined, method: undefined, statusCode: undefined, from: undefined, to: undefined })
           }
         >
-          <FilterX /> Xóa lọc
+          <FilterX /> Xóa bộ lọc
         </Button>
       )}
     </form>

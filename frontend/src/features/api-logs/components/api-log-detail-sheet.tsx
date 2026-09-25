@@ -27,7 +27,7 @@ export function ApiLogDetailSheet({ id, onClose }: { id: number | undefined; onC
     <Sheet open={!!id} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full gap-0 sm:max-w-2xl">
         <SheetHeader>
-          <SheetTitle>API log #{id}</SheetTitle>
+          <SheetTitle>Nhật ký API #{id}</SheetTitle>
           <SheetDescription>Chi tiết request / response</SheetDescription>
         </SheetHeader>
         <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-6">
@@ -55,19 +55,19 @@ export function ApiLogDetailSheet({ id, onClose }: { id: number | undefined; onC
                 <Field label="traceId">
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="font-mono text-xs">{data.traceId}</code>
-                    <CopyButton value={data.traceId} label="Copy traceId" />
+                    <CopyButton value={data.traceId} label="Sao chép traceId" />
                   </div>
                 </Field>
-                <Field label="User">{data.userName ?? data.userId ?? '—'}</Field>
+                <Field label="Người dùng">{data.userName ?? data.userId ?? '—'}</Field>
                 <Field label="IP">{data.ip ?? '—'}</Field>
-                <Field label="Module">{data.module}</Field>
+                <Field label="Mô-đun">{data.module}</Field>
                 <Field label="User agent">
                   <span className="text-xs">{data.userAgent ?? '—'}</span>
                 </Field>
               </dl>
               <Separator />
-              <JsonBlock title="Request" value={data.request} />
-              <JsonBlock title="Response" value={data.response} />
+              <JsonBlock title="Request" copyLabel="Sao chép request" value={data.request} />
+              <JsonBlock title="Response" copyLabel="Sao chép response" value={data.response} />
             </>
           ) : null}
         </div>

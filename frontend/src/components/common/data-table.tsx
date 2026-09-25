@@ -45,8 +45,17 @@ export interface DataTableProps<TData> {
   onSortingChange?: (sorting: SortingState) => void;
   /** server-side pagination; omit to hide the footer */
   pagination?: DataTablePaginationProps;
+  /**
+   * Plain left click on a row (clicks on links / buttons / inputs inside the row and modified clicks are left to the
+   * browser, so a real link in a cell keeps middle-click / Ctrl+click / "open in new tab").
+   */
   onRowClick?: (row: TData) => void;
-  /** pointer enters / keyboard focus lands on a row (e.g. to prefetch its detail) */
+  /**
+   * Rows are tab stops activated with Enter / Space (default: when `onRowClick` is set). Pass false when a cell
+   * already renders a link to the same place, so each row has a single tab stop.
+   */
+  focusableRows?: boolean;
+  /** pointer enters / keyboard focus lands on a row or inside it (e.g. to prefetch its detail) */
   onRowHover?: (row: TData) => void;
   emptyText?: ReactNode;
   /** shown instead of the empty text when loading failed and there is no data to show */
@@ -55,6 +64,9 @@ export interface DataTableProps<TData> {
   className?: string;
   'aria-label'?: string;
 }
+
+/** Clicks on these (inside a row) are theirs, not the row's. */
+const INTERACTIVE_SELECTOR = 'a[href], button, input, select, textarea, label, [role="button"], [role="checkbox"], [role="switch"], [role="combobox"]';
 
 /** Page numbers with ellipses, e.g. 1 … 4 5 6 … 12 */
 export function pageWindow(page: number, pageCount: number): (number | 'ellipsis')[] {
@@ -155,6 +167,7 @@ export function DataTable<TData>({
   onSortingChange,
   pagination,
   onRowClick,
+  focusableRows = !!onRowClick,
   onRowHover,
   emptyText = 'Không có dữ liệu',
   error,
@@ -193,10 +206,16 @@ export function DataTable<TData>({
   const showSkeleton = loading && rows.length === 0;
 
   const handleRowKey = (e: React.KeyboardEvent, row: Row<TData>) => {
-    if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+    if (onRowClick && e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       onRowClick(row.original);
     }
+  };
+
+  const handleRowClick = (e: React.MouseEvent, row: Row<TData>) => {
+    if (!onRowClick || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if ((e.target as HTMLElement).closest(INTERACTIVE_SELECTOR)) return;
+    onRowClick(row.original);
   };
 
   return (
@@ -260,12 +279,14 @@ export function DataTable<TData>({
                 <TableRow
                   key={row.id}
                   className={cn(
+                    onRowClick && 'cursor-pointer',
                     onRowClick &&
-                      'cursor-pointer outline-none focus-visible:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                      focusableRows &&
+                      'outline-none focus-visible:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
                   )}
-                  tabIndex={onRowClick ? 0 : undefined}
-                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                  onKeyDown={onRowClick ? (e) => handleRowKey(e, row) : undefined}
+                  tabIndex={onRowClick && focusableRows ? 0 : undefined}
+                  onClick={onRowClick ? (e) => handleRowClick(e, row) : undefined}
+                  onKeyDown={onRowClick && focusableRows ? (e) => handleRowKey(e, row) : undefined}
                   onMouseEnter={onRowHover ? () => onRowHover(row.original) : undefined}
                   onFocus={onRowHover ? () => onRowHover(row.original) : undefined}
                 >

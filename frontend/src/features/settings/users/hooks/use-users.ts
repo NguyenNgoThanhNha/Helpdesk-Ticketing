@@ -50,7 +50,7 @@ export function useSetUserRoles() {
     mutationFn: ({ id, roleIds }: { id: string; roleIds: string[] }) => usersApi.setRoles(id, roleIds),
     meta: { suppressGlobalError: true },
     onSuccess: (u) => {
-      toast.success(`Đã cập nhật role cho ${u.fullName}`);
+      toast.success(`Đã cập nhật vai trò cho ${u.fullName}`);
       void queryClient.invalidateQueries({ queryKey: queryKeys.users });
       void queryClient.invalidateQueries({ queryKey: queryKeys.roles });
       refreshMe(u.id);

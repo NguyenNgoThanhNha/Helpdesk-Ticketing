@@ -27,13 +27,13 @@ export function AssignRolesDialog({ user, onClose }: { user: UserListItemDto | n
     <Dialog open={!!user} onOpenChange={(o) => !o && !save.isPending && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Gán role — {user?.fullName}</DialogTitle>
+          <DialogTitle>Gán vai trò — {user?.fullName}</DialogTitle>
           <DialogDescription>{user?.email}</DialogDescription>
         </DialogHeader>
         <MultiSelect
-          aria-label="Chọn role"
-          placeholder="Chọn role"
-          searchPlaceholder="Tìm role..."
+          aria-label="Chọn vai trò"
+          placeholder="Chọn vai trò"
+          searchPlaceholder="Tìm vai trò..."
           loading={roles.isLoading}
           value={roleIds}
           onChange={setRoleIds}

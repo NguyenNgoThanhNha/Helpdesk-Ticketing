@@ -12,7 +12,7 @@ import {
 } from '@/types';
 
 const FLAG: Record<ActivityAction, keyof CrudFlags> = { C: 'c', R: 'r', U: 'u', D: 'd' };
-const ACTION_LABEL: Record<ActivityAction, string> = { C: 'Create', R: 'Read', U: 'Update', D: 'Delete' };
+const ACTION_LABEL: Record<ActivityAction, string> = { C: 'Thêm', R: 'Xem', U: 'Sửa', D: 'Xóa' };
 
 /**
  * Flags that are meaningful for the known activity codes (API contract table).
@@ -147,7 +147,7 @@ export function PermissionMatrix({ activities, value, onChange, readOnly, loadin
                   {!readOnly && (
                     <TableCell className="text-center">
                       <Checkbox
-                        aria-label={`${a.code} all`}
+                        aria-label={`${a.code} tất cả`}
                         checked={on > 0 && on === applicable.length ? true : on > 0 ? 'indeterminate' : false}
                         onCheckedChange={() => setRow(a, on !== applicable.length)}
                       />

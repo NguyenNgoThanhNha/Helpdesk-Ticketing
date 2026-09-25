@@ -2,7 +2,16 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { server } from './server';
+import { hubMock } from './signalr-mock';
+import { realtime } from '@/lib/realtime';
 import { useAuthStore } from '@/stores/auth-store';
+
+// No test opens a real SignalR connection: the builder is replaced by an in-memory fake (see signalr-mock.ts);
+// the rest of the package (enums, error types) stays real.
+vi.mock('@microsoft/signalr', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@microsoft/signalr')>()),
+  HubConnectionBuilder: (await import('./signalr-mock')).HubConnectionBuilder,
+}));
 
 configure({ asyncUtilTimeout: 5000 });
 
@@ -42,8 +51,10 @@ if (!window.URL.createObjectURL) {
 
 // ---- MSW ----
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await realtime.stop();
+  hubMock.reset();
   server.resetHandlers();
   useAuthStore.getState().logout();
   localStorage.clear();
