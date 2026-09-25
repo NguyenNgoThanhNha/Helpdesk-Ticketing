@@ -83,6 +83,8 @@ export function ApiLogsPage() {
             loading={logs.isFetching}
             onRowClick={(l) => setSelectedId(l.id)}
             emptyText="Không có log nào"
+            error={logs.isError ? 'Không tải được API logs' : undefined}
+            onRetry={() => void logs.refetch()}
             pagination={{
               page: filters.page,
               pageSize: filters.pageSize,

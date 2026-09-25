@@ -22,7 +22,7 @@ export function SlaBadge({ state, text, hint }: { state: SlaState; text?: string
       <TooltipTrigger asChild>
         <span
           role="img"
-          aria-label={`SLA ${state}`}
+          aria-label={[`SLA: ${meta.label}`, text ?? hint].filter(Boolean).join(', ')}
           data-sla-state={state}
           className={cn('inline-flex items-center gap-1.5 text-sm', meta.className)}
         >

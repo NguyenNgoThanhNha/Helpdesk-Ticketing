@@ -2,7 +2,7 @@ using System.Collections;
 using System.Data;
 using System.Reflection;
 
-namespace Helpdesk.Infrastructure.Commons;
+namespace Helpdesk.Application.Common.Data;
 
 /// <summary>
 /// Đọc kết quả stored procedure theo thứ tự bảng — port từ Backend_Api_Template:

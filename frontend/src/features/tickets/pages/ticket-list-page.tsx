@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/common/data-table';
 import { PageHeader } from '@/components/common/page-header';
-import { formatDateTime, slaCountdown } from '@/lib/date';
+import { formatDateTime, formatDateTimeShort, slaCountdown } from '@/lib/date';
 import { useUrlParams } from '@/lib/hooks/use-url-params';
 import { cn } from '@/lib/utils';
 import { useCan } from '@/stores/auth-store';
@@ -16,7 +16,7 @@ import { PriorityBadge } from '../components/priority-badge';
 import { SlaBadge } from '../components/sla-badge';
 import { StatusBadge } from '../components/status-badge';
 import { TicketFilters } from '../components/ticket-filters';
-import { useTickets } from '../hooks/use-tickets';
+import { usePrefetchTicket, useTickets } from '../hooks/use-tickets';
 import { DEFAULT_PAGE_SIZE, parseTicketQuery, sortingToSort, sortToSorting } from '../ticket-query';
 
 interface Props {
@@ -24,7 +24,15 @@ interface Props {
   mode?: 'all' | 'queue';
 }
 
-const muted = (v: string | null | undefined) => v ?? <span className="text-muted-foreground">—</span>;
+/** Single-line cell that truncates long names (full text in the tooltip) so the table fits at ~1280px. */
+const clip = (v: string | null | undefined, className = 'max-w-40') =>
+  v ? (
+    <span className={cn('block truncate', className)} title={v}>
+      {v}
+    </span>
+  ) : (
+    <span className="text-muted-foreground">—</span>
+  );
 
 function buildColumns(showCreatedBy: boolean): ColumnDef<TicketListItemDto>[] {
   const columns: ColumnDef<TicketListItemDto>[] = [
@@ -39,7 +47,7 @@ function buildColumns(showCreatedBy: boolean): ColumnDef<TicketListItemDto>[] {
       id: 'title',
       header: 'Title',
       cell: ({ row }) => (
-        <span className="line-clamp-1 max-w-[22rem] break-all" title={row.original.title}>
+        <span className="block max-w-56 truncate 2xl:max-w-[26rem]" title={row.original.title}>
           {row.original.title}
         </span>
       ),
@@ -50,13 +58,13 @@ function buildColumns(showCreatedBy: boolean): ColumnDef<TicketListItemDto>[] {
       id: 'category',
       header: 'Category',
       enableSorting: false,
-      cell: ({ row }) => row.original.categoryName,
+      cell: ({ row }) => clip(row.original.categoryName, 'max-w-32'),
     },
     {
       id: 'assignee',
       header: 'Assignee',
       enableSorting: false,
-      cell: ({ row }) => muted(row.original.assigneeName),
+      cell: ({ row }) => clip(row.original.assigneeName, 'max-w-32'),
     },
     {
       id: 'sla',
@@ -72,7 +80,11 @@ function buildColumns(showCreatedBy: boolean): ColumnDef<TicketListItemDto>[] {
     {
       id: 'createdAt',
       header: 'Created',
-      cell: ({ row }) => <span className="whitespace-nowrap">{formatDateTime(row.original.createdAt)}</span>,
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap tabular-nums" title={formatDateTime(row.original.createdAt)}>
+          {formatDateTimeShort(row.original.createdAt)}
+        </span>
+      ),
     },
   ];
   if (showCreatedBy) {
@@ -80,7 +92,9 @@ function buildColumns(showCreatedBy: boolean): ColumnDef<TicketListItemDto>[] {
       id: 'createdBy',
       header: 'Created by',
       enableSorting: false,
-      cell: ({ row }) => row.original.createdByName,
+      cell: ({ row }) => clip(row.original.createdByName, 'max-w-32'),
+      // secondary column (not in the spec wireframe): only on wide screens so the table fits at 1280px
+      meta: { headerClassName: 'hidden 2xl:table-cell', cellClassName: 'hidden 2xl:table-cell' },
     });
   }
   return columns;
@@ -88,6 +102,8 @@ function buildColumns(showCreatedBy: boolean): ColumnDef<TicketListItemDto>[] {
 
 export function TicketListPage({ mode = 'all' }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefetchTicket = usePrefetchTicket();
   /** TICKET:R = can see all tickets (assignee filter, created-by column) */
   const canReadAll = useCan('TICKET', 'R');
   const canCreate = useCan('TICKET', 'C');
@@ -130,8 +146,12 @@ export function TicketListPage({ mode = 'all' }: Props) {
             loading={tickets.isFetching}
             sorting={sorting}
             onSortingChange={(s) => updateParams({ sort: sortingToSort(s) })}
-            onRowClick={(t) => navigate(`/tickets/${t.id}`)}
+            // remember the (filtered) list so the detail page's back button returns to it
+            onRowClick={(t) => navigate(`/tickets/${t.id}`, { state: { from: location.pathname + location.search } })}
+            onRowHover={(t) => prefetchTicket(t.id)}
             emptyText="Không có ticket nào"
+            error={tickets.isError ? 'Không tải được danh sách ticket' : undefined}
+            onRetry={() => void tickets.refetch()}
             pagination={{
               page: query.page ?? 1,
               pageSize: query.pageSize ?? DEFAULT_PAGE_SIZE,

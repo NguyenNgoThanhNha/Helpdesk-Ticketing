@@ -55,8 +55,8 @@ export const PRIORITY_META: Record<TicketPriority, { label: string; className: s
 };
 
 export const SLA_META: Record<SlaState, { label: string; className: string }> = {
-  OnTrack: { label: 'Còn hạn (On track)', className: 'text-emerald-600 dark:text-emerald-400' },
-  AtRisk: { label: 'Sắp hết hạn (At risk)', className: 'text-orange-500 dark:text-orange-400' },
+  OnTrack: { label: 'Còn hạn (On track)', className: 'text-emerald-700 dark:text-emerald-400' },
+  AtRisk: { label: 'Sắp hết hạn (At risk)', className: 'text-orange-700 dark:text-orange-400' },
   Breached: { label: 'Quá hạn (Breached)', className: 'text-red-600 dark:text-red-400' },
   Met: { label: 'Đạt SLA (Met)', className: 'text-muted-foreground' },
 };

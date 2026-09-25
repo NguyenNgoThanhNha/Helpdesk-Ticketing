@@ -1,5 +1,14 @@
-import { dayjs, slaCountdown } from './date';
+import { dayjs, formatDateTimeShort, slaCountdown } from './date';
 import { formatFileSize } from './file';
+
+describe('formatDateTimeShort', () => {
+  it('drops the year for dates in the current year and the time for older ones', () => {
+    const thisYear = dayjs().year();
+    expect(formatDateTimeShort(dayjs(`${thisYear}-06-18T09:50:00`).toISOString())).toBe('18/06 09:50');
+    expect(formatDateTimeShort(dayjs(`${thisYear - 1}-06-18T09:50:00`).toISOString())).toBe(`18/06/${thisYear - 1}`);
+    expect(formatDateTimeShort(null)).toBe('—');
+  });
+});
 
 describe('slaCountdown', () => {
   const now = dayjs('2026-09-23T10:00:00Z');

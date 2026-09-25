@@ -40,6 +40,8 @@ Mức độ: **[BẮT BUỘC]** = vi phạm thì không merge · **[NÊN]** = l�
 | 3.7 | **[BẮT BUỘC]** Stored procedure chỉ gọi qua `unitOfWork.ExecuteStoreProcedureGetMultiTables("[dbo].[usp_X]", new Hashtable { ["@Param"] = v })`, đọc bằng `.ToDataSetSimpleRead().TryRead<T>()`. SP được tạo bằng migration (`migrationBuilder.Sql`), không tạo tay trên DB. |
 | 3.8 | **[BẮT BUỘC]** Không nối chuỗi SQL với input người dùng. Raw SQL phải dùng `SqlParameter`. |
 | 3.9 | **[BẮT BUỘC]** EF không dịch được `OrderBy`/`Where` trên record DTO tạo trong `Select`. Muốn sắp xếp/lọc trên kết quả group thì project ra anonymous type trước, `ToListAsync`, rồi mới map sang DTO. |
+| 3.10 | **[BẮT BUỘC]** Stored procedure cho màn danh sách lọc động phải: (a) dùng **dynamic SQL có tham số** `sp_executesql`, chỉ ghép điều kiện được truyền vào, `ORDER BY` lấy từ whitelist; **không** `SELECT` toàn bộ dòng vào bảng tạm rồi mới phân trang (đã đo: chậm hơn LINQ gấp 8 lần). (b) Tự lọc `IsDeleted = 0` trên mọi bảng, vì SP không có global query filter của EF. (c) Escape `[ % _` khi dùng `LIKE`. (d) Trả bảng 1 là `TotalCount`, bảng 2 là dữ liệu trang. (e) File `.sql` đặt ở `Persistence/Sql/` (EmbeddedResource, `CREATE OR ALTER`) và cài bằng migration gọi `SqlScripts.Read(...)`. (f) Có integration test chạy SP trên SQL Server thật. Mẫu: `usp_Ticket_Search`, `usp_Report_Summary` trong Helpdesk. |
+| 3.11 | **[BẮT BUỘC]** Trước khi chuyển một query sang SP hoặc thêm/sửa index phải **đo trên dữ liệu lớn** (≥ vài chục nghìn dòng), cả trước lẫn sau, rồi giữ cách nhanh hơn. Không tối ưu theo cảm tính. |
 
 ## 4. Entity, database, migration
 
@@ -54,6 +56,7 @@ Mức độ: **[BẮT BUỘC]** = vi phạm thì không merge · **[NÊN]** = l�
 | 4.7 | **[BẮT BUỘC]** Bảng có sửa đồng thời (tồn kho, trạng thái chứng từ...) phải có `byte[] RowVersion` + `.IsRowVersion()`; client gửi lại `rowVersion`. |
 | 4.8 | **[NÊN]** Entity có nghiệp vụ dùng setter `private` + method domain (xem `Ticket` trong Helpdesk). Bảng hệ thống / bảng đơn giản được phép dùng setter public. |
 | 4.9 | **[BẮT BUỘC]** Entity tự quyết định người tạo (bảng lịch sử, "Hệ thống" = null) phải implement `IExplicitCreator`. |
+| 4.10 | **[BẮT BUỘC]** Index phục vụ query EF trên bảng xóa mềm phải chứa `IsDeleted`, bằng `INCLUDE` hoặc filtered index `WHERE [IsDeleted] = 0`. Mọi query EF đều có điều kiện này (global filter); nếu index thiếu cột, SQL phải key lookup từng dòng. Ví dụ đo được: auto-assign 50–90 ms, còn 20 ms sau khi thêm `IsDeleted` vào `INCLUDE`. |
 
 ## 5. Phân quyền 6 bảng
 
@@ -134,7 +137,7 @@ Mức độ: **[BẮT BUỘC]** = vi phạm thì không merge · **[NÊN]** = l�
 [ ] Handler dùng IUnitOfWork<...>, SaveChangesAsync một lần ở cuối
 [ ] Mọi Command có Validator
 [ ] Endpoint có [HasPermission] (hoặc comment lý do); activity mới đã thêm ConstActivity.All
-[ ] Query đọc: AsNoTracking + projection, không N+1 (đã xem SQL log)
+[ ] Query đọc: AsNoTracking + projection, không N+1 (đã xem SQL log); SP/index mới có số đo trước–sau
 [ ] Không chuỗi mã nghiệp vụ trần; cấu hình qua IOptions
 [ ] Đổi schema có migration
 [ ] Field nhạy cảm mới đã thêm vào ApiLogging:SensitiveFields

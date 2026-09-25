@@ -14,7 +14,14 @@ export const formatDateTime = (value: string | null | undefined) =>
 export const formatDateTimeSeconds = (value: string | null | undefined) =>
   value ? dayjs(value).format('DD/MM/YYYY HH:mm:ss') : '—';
 
-export const formatDate = (value: string | null | undefined) => (value ? dayjs(value).format('DD/MM/YYYY') : '—');
+/** Compact table format: "18/06 09:50" within the current year, "18/06/2025" otherwise (full value belongs in a tooltip). */
+export const formatDateTimeShort = (value: string | null | undefined) => {
+  if (!value) return '—';
+  const d = dayjs(value);
+  return d.year() === dayjs().year() ? d.format('DD/MM HH:mm') : d.format('DD/MM/YYYY');
+};
+
+export const formatDate =(value: string | null | undefined) => (value ? dayjs(value).format('DD/MM/YYYY') : '—');
 
 export const fromNow = (value: string) => dayjs(value).fromNow();
 

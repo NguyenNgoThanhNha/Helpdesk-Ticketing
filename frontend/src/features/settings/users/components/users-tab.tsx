@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { DataTable } from '@/components/common/data-table';
 import { formatDate } from '@/lib/date';
+import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { useCan, useCurrentUser } from '@/stores/auth-store';
 import type { UserListItemDto, UsersQuery } from '@/types';
 import { useRoles } from '../../roles/hooks/use-roles';
@@ -24,10 +26,18 @@ export function UsersTab() {
   const [searchText, setSearchText] = useState('');
   const [rolesFor, setRolesFor] = useState<UserListItemDto | null>(null);
   const [permsFor, setPermsFor] = useState<UserListItemDto | null>(null);
+  /** a locked user can no longer sign in, so locking is confirmed first */
+  const [locking, setLocking] = useState<UserListItemDto | null>(null);
   const roles = useRoles();
   const users = useUsers(query);
   const toggleActive = useToggleUserActive();
   const pendingId = toggleActive.isPending ? toggleActive.variables?.id : undefined;
+  const applySearch = useDebouncedCallback((text: string) =>
+    setQuery((q) => {
+      const search = text.trim() || undefined;
+      return search === q.search ? q : { ...q, search, page: 1 };
+    }),
+  );
 
   const columns: ColumnDef<UserListItemDto>[] = [
     { id: 'fullName', header: 'Họ tên', cell: ({ row }) => <span className="font-medium">{row.original.fullName}</span> },
@@ -59,7 +69,9 @@ export function UsersTab() {
             aria-label={`Active ${u.email}`}
             checked={u.isActive}
             disabled={!canEdit || u.id === me?.id || pendingId === u.id}
-            onCheckedChange={(checked) => toggleActive.mutate({ id: u.id, isActive: checked })}
+            onCheckedChange={(checked) =>
+              checked ? toggleActive.mutate({ id: u.id, isActive: true }) : setLocking(u)
+            }
           />
         );
       },
@@ -91,7 +103,7 @@ export function UsersTab() {
           className="relative w-full sm:w-72"
           onSubmit={(e) => {
             e.preventDefault();
-            setQuery((q) => ({ ...q, search: searchText.trim() || undefined, page: 1 }));
+            applySearch.flush(searchText);
           }}
         >
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -100,14 +112,17 @@ export function UsersTab() {
             placeholder="Tìm theo tên / email"
             className="pl-8"
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              applySearch.run(e.target.value);
+            }}
           />
         </form>
         <Select
           value={query.roleId ?? ALL}
           onValueChange={(v) => setQuery((q) => ({ ...q, roleId: v === ALL ? undefined : v, page: 1 }))}
         >
-          <SelectTrigger aria-label="Role filter" className="w-44">
+          <SelectTrigger aria-label="Lọc theo role" className="w-44">
             <SelectValue placeholder="Role" />
           </SelectTrigger>
           <SelectContent>
@@ -123,11 +138,13 @@ export function UsersTab() {
         </Select>
       </div>
       <DataTable
-        aria-label="Users"
+        aria-label="Người dùng"
         columns={columns}
         data={users.data?.items ?? []}
         getRowId={(u) => u.id}
         loading={users.isFetching}
+        error={users.isError ? 'Không tải được danh sách người dùng' : undefined}
+        onRetry={() => void users.refetch()}
         pagination={{
           page: query.page ?? 1,
           pageSize: query.pageSize ?? 20,
@@ -138,6 +155,15 @@ export function UsersTab() {
       />
       <AssignRolesDialog user={rolesFor} onClose={() => setRolesFor(null)} />
       <UserPermissionsSheet user={permsFor} onClose={() => setPermsFor(null)} />
+      <ConfirmDialog
+        open={!!locking}
+        onOpenChange={(o) => !o && setLocking(null)}
+        title={`Khóa tài khoản ${locking?.fullName ?? ''}?`}
+        description={`${locking?.email ?? ''} sẽ không đăng nhập được cho đến khi được mở khóa lại.`}
+        confirmText="Khóa"
+        destructive
+        onConfirm={() => locking && toggleActive.mutateAsync({ id: locking.id, isActive: false })}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ using Helpdesk.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Helpdesk.Persistence.Migrations
 {
     [DbContext(typeof(HelpdeskDbContext))]
-    partial class HelpdeskDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260925070131_AddReportingStoredProcedures")]
+    partial class AddReportingStoredProcedures
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -857,6 +860,8 @@ namespace Helpdesk.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssigneeId");
+
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("CreatedById");
@@ -864,10 +869,6 @@ namespace Helpdesk.Persistence.Migrations
                     b.HasIndex("CreatedDate");
 
                     b.HasIndex("Status");
-
-                    b.HasIndex("AssigneeId", "Status");
-
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("AssigneeId", "Status"), new[] { "CreatedDate", "IsDeleted" });
 
                     b.HasIndex("Status", "ResolveDueAt");
 

@@ -46,10 +46,13 @@ export function ReplyBox({ ticketId }: { ticketId: number }) {
       />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <FilePicker files={files} onChange={setFiles} disabled={addComment.isPending} label="Đính kèm" />
-        <Button onClick={send} disabled={addComment.isPending}>
-          {addComment.isPending ? <Loader2 className="animate-spin" /> : <SendHorizontal />}
-          Gửi
-        </Button>
+        <div className="flex items-center gap-3">
+          <span className="hidden text-xs text-muted-foreground sm:inline">Ctrl + Enter để gửi</span>
+          <Button onClick={send} disabled={addComment.isPending}>
+            {addComment.isPending ? <Loader2 className="animate-spin" /> : <SendHorizontal />}
+            Gửi
+          </Button>
+        </div>
       </div>
     </div>
   );

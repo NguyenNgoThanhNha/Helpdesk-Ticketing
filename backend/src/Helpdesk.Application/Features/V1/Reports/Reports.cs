@@ -21,78 +21,95 @@ namespace Helpdesk.Application.Features.V1.Reports.DTOs
 
 namespace Helpdesk.Application.Features.V1.Reports.Queries.GetReportSummary
 {
+    using System.Collections;
+    using Helpdesk.Application.Common.Data;
     using Helpdesk.Application.Features.V1.Reports.DTOs;
-    using Helpdesk.Application.Features.V1.Tickets.Queries.SearchTickets;
-    using Helpdesk.Domain.Entities.Sys;
-    using Helpdesk.Domain.Entities.Tickets;
 
     /// <summary>Báo cáo tổng hợp theo ngày tạo ticket. from/to dạng yyyy-MM-dd, to tính cả ngày (mặc định 30 ngày gần nhất).</summary>
     public sealed record GetReportSummaryQuery(DateOnly? From, DateOnly? To) : IRequest<ReportSummaryDto>;
 
+    /// <summary>
+    /// Tổng hợp số liệu nhiều bảng → stored procedure [dbo].[usp_Report_Summary] trả 5 bảng trong 1 round-trip
+    /// (chuẩn BE §5 · RULES 3.7) thay vì 7 query + tính trong RAM.
+    /// </summary>
     public sealed class GetReportSummaryQueryHandler(IUnitOfWork<HelpdeskDbContext> unitOfWork, TimeProvider clock)
         : IRequestHandler<GetReportSummaryQuery, ReportSummaryDto>
     {
-        public async Task<ReportSummaryDto> Handle(GetReportSummaryQuery request, CancellationToken ct)
+        private const int MaxRangeDays = 366;
+
+        public Task<ReportSummaryDto> Handle(GetReportSummaryQuery request, CancellationToken ct)
         {
             var now = clock.GetUtcNow().UtcDateTime;
             var to = request.To ?? DateOnly.FromDateTime(now);
             var from = request.From ?? to.AddDays(-29);
             if (from > to) throw new ValidationException("from", "Ngày bắt đầu phải trước ngày kết thúc.");
+            if (to.DayNumber - from.DayNumber >= MaxRangeDays)
+                throw new ValidationException("from", $"Khoảng thời gian tối đa {MaxRangeDays} ngày.");
 
-            var start = from.ToDateTime(TimeOnly.MinValue);
-            var end = to.AddDays(1).ToDateTime(TimeOnly.MinValue);
-            var tickets = unitOfWork.Repository<Ticket>().AsNoTracking().Where(t => t.CreatedDate >= start && t.CreatedDate < end);
+            var ds = unitOfWork.ExecuteStoreProcedureGetMultiTables("[dbo].[usp_Report_Summary]", new Hashtable
+            {
+                ["@From"] = from.ToDateTime(TimeOnly.MinValue),
+                ["@To"] = to.AddDays(1).ToDateTime(TimeOnly.MinValue),
+                ["@Now"] = now
+            }).ToDataSetSimpleRead();
 
-            var total = await tickets.CountAsync(ct);
-            var open = await tickets.CountAsync(t => t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed, ct);
-            var breached = await tickets.CountAsync(SearchTicketsQueryHandler.SlaPredicate(SlaState.Breached, now), ct);
+            // Đọc đúng thứ tự bảng SP trả về.
+            var kpi = ds.TryRead<KpiRow>()?.FirstOrDefault() ?? new KpiRow();
+            var byStatus = (ds.TryRead<StatusRow>() ?? [])
+                .Select(r => new KeyCountDto(((TicketStatus)r.Status).ToString(), r.Count)).ToList();
+            var byCategory = (ds.TryRead<KeyCountRow>() ?? []).Select(r => new KeyCountDto(r.Key, r.Count)).ToList();
+            var perDay = (ds.TryRead<DayRow>() ?? []).ToDictionary(r => DateOnly.FromDateTime(r.Day), r => r.Count);
+            var agents = (ds.TryRead<AgentRow>() ?? [])
+                .Select(r => new AgentPerformanceDto(r.AgentId, r.AgentName, r.Assigned, r.Resolved,
+                    Round(r.AvgResolutionHours), Round(r.SlaComplianceRate)))
+                .ToList();
 
-            var byStatus = (await tickets.GroupBy(t => t.Status).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct))
-                .OrderBy(x => x.Key).Select(x => new KeyCountDto(x.Key.ToString(), x.Count)).ToList();
-
-            var byCategory = (await tickets.GroupBy(t => t.Category.Name)
-                    .Select(g => new { g.Key, Count = g.Count() }).OrderByDescending(x => x.Count).ToListAsync(ct))
-                .Select(x => new KeyCountDto(x.Key, x.Count)).ToList();
-
-            var perDay = await tickets.GroupBy(t => t.CreatedDate.Date).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
-            var perDayMap = perDay.ToDictionary(x => DateOnly.FromDateTime(x.Key), x => x.Count);
             var byDay = Enumerable.Range(0, to.DayNumber - from.DayNumber + 1)
                 .Select(i => from.AddDays(i))
-                .Select(d => new DayCountDto(d.ToString("yyyy-MM-dd"), perDayMap.GetValueOrDefault(d)))
+                .Select(d => new DayCountDto(d.ToString("yyyy-MM-dd"), perDay.GetValueOrDefault(d)))
                 .ToList();
 
-            // Số liệu thời gian giải quyết tính trong bộ nhớ trên tập ticket đã resolve (đủ nhỏ theo khoảng ngày).
-            var resolved = await tickets.Where(t => t.ResolvedAt != null)
-                .Select(t => new { t.AssigneeId, t.CreatedDate, ResolvedAt = t.ResolvedAt!.Value, t.ResolveDueAt, t.IsSlaBreached })
-                .ToListAsync(ct);
+            return Task.FromResult(new ReportSummaryDto(kpi.TotalTickets, kpi.OpenTickets, kpi.BreachedTickets,
+                Round(kpi.AvgResolutionHours), Round(kpi.SlaComplianceRate), byStatus, byCategory, byDay, agents));
+        }
 
-            static double Hours(DateTime a, DateTime b) => (b - a).TotalHours;
-            double? Avg<T>(IReadOnlyCollection<T> items, Func<T, double> selector) =>
-                items.Count == 0 ? null : Math.Round(items.Average(selector), 1);
-            double? Compliance<T>(IReadOnlyCollection<T> items, Func<T, bool> met) =>
-                items.Count == 0 ? null : Math.Round(100.0 * items.Count(met) / items.Count, 1);
+        private static double? Round(double? value) => value is { } v ? Math.Round(v, 1) : null;
 
-            var assigned = await tickets.Where(t => t.AssigneeId != null)
-                .GroupBy(t => t.AssigneeId!.Value).Select(g => new { AgentId = g.Key, Count = g.Count() }).ToListAsync(ct);
-            var agentIds = assigned.Select(a => a.AgentId).ToList();
-            var names = await unitOfWork.Repository<SysAccount>().AsNoTracking().IgnoreQueryFilters()
-                .Where(u => agentIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, ct);
+        private sealed class KpiRow
+        {
+            public int TotalTickets { get; set; }
+            public int OpenTickets { get; set; }
+            public int BreachedTickets { get; set; }
+            public double? AvgResolutionHours { get; set; }
+            public double? SlaComplianceRate { get; set; }
+        }
 
-            var agentPerformance = assigned
-                .Select(a =>
-                {
-                    var mine = resolved.Where(r => r.AssigneeId == a.AgentId).ToList();
-                    return new AgentPerformanceDto(a.AgentId, names.GetValueOrDefault(a.AgentId, "?"), a.Count, mine.Count,
-                        Avg(mine, r => Hours(r.CreatedDate, r.ResolvedAt)),
-                        Compliance(mine, r => !r.IsSlaBreached && (r.ResolveDueAt == null || r.ResolvedAt <= r.ResolveDueAt)));
-                })
-                .OrderByDescending(a => a.Resolved).ThenBy(a => a.AgentName)
-                .ToList();
+        private sealed class StatusRow
+        {
+            public int Status { get; set; }
+            public int Count { get; set; }
+        }
 
-            return new ReportSummaryDto(total, open, breached,
-                Avg(resolved, r => Hours(r.CreatedDate, r.ResolvedAt)),
-                Compliance(resolved, r => !r.IsSlaBreached && (r.ResolveDueAt == null || r.ResolvedAt <= r.ResolveDueAt)),
-                byStatus, byCategory, byDay, agentPerformance);
+        private sealed class KeyCountRow
+        {
+            public string Key { get; set; } = string.Empty;
+            public int Count { get; set; }
+        }
+
+        private sealed class DayRow
+        {
+            public DateTime Day { get; set; }
+            public int Count { get; set; }
+        }
+
+        private sealed class AgentRow
+        {
+            public Guid AgentId { get; set; }
+            public string AgentName { get; set; } = string.Empty;
+            public int Assigned { get; set; }
+            public int Resolved { get; set; }
+            public double? AvgResolutionHours { get; set; }
+            public double? SlaComplianceRate { get; set; }
         }
     }
 }

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-client';
 import type { CreateTicketRequest, TicketsQuery, UpdateTicketRequest } from '@/types';
@@ -11,6 +12,42 @@ export function useTickets(query: TicketsQuery) {
     queryFn: () => ticketsApi.list(query),
     placeholderData: keepPreviousData,
   });
+}
+
+/** How long a hover must rest on a row before its detail is prefetched (skips rows the pointer just sweeps over). */
+export const PREFETCH_INTENT_MS = 120;
+/** Prefetched detail counts as fresh for this long, so opening it right after hovering needs no request. */
+const PREFETCH_STALE_MS = 30_000;
+
+/**
+ * Returns `prefetch(id)` for list rows: after a short hover / focus intent it warms the cache with the ticket
+ * detail + history, so the detail page renders without a spinner. Only the latest hovered row is prefetched.
+ */
+export function usePrefetchTicket() {
+  const queryClient = useQueryClient();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  return useCallback(
+    (id: number) => {
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.ticket(id),
+          queryFn: () => ticketsApi.get(id),
+          staleTime: PREFETCH_STALE_MS,
+          meta: { suppressGlobalError: true },
+        });
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.ticketHistory(id),
+          queryFn: () => ticketsApi.history(id),
+          staleTime: PREFETCH_STALE_MS,
+          meta: { suppressGlobalError: true },
+        });
+      }, PREFETCH_INTENT_MS);
+    },
+    [queryClient],
+  );
 }
 
 export function useTicket(id: number) {

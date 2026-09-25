@@ -8,7 +8,7 @@ import {
   type Row,
   type SortingState,
 } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, RotateCw, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -46,7 +46,12 @@ export interface DataTableProps<TData> {
   /** server-side pagination; omit to hide the footer */
   pagination?: DataTablePaginationProps;
   onRowClick?: (row: TData) => void;
+  /** pointer enters / keyboard focus lands on a row (e.g. to prefetch its detail) */
+  onRowHover?: (row: TData) => void;
   emptyText?: ReactNode;
+  /** shown instead of the empty text when loading failed and there is no data to show */
+  error?: ReactNode;
+  onRetry?: () => void;
   className?: string;
   'aria-label'?: string;
 }
@@ -150,7 +155,10 @@ export function DataTable<TData>({
   onSortingChange,
   pagination,
   onRowClick,
+  onRowHover,
   emptyText = 'Không có dữ liệu',
+  error,
+  onRetry,
   className,
   'aria-label': ariaLabel,
 }: DataTableProps<TData>) {
@@ -240,8 +248,8 @@ export function DataTable<TData>({
             {showSkeleton ? (
               Array.from({ length: 5 }, (_, i) => (
                 <TableRow key={`sk${i}`}>
-                  {columns.map((_c, j) => (
-                    <TableCell key={j}>
+                  {columns.map((c, j) => (
+                    <TableCell key={j} className={c.meta?.cellClassName}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
                   ))}
@@ -251,10 +259,15 @@ export function DataTable<TData>({
               rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className={cn(onRowClick && 'cursor-pointer')}
+                  className={cn(
+                    onRowClick &&
+                      'cursor-pointer outline-none focus-visible:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                  )}
                   tabIndex={onRowClick ? 0 : undefined}
                   onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                   onKeyDown={onRowClick ? (e) => handleRowKey(e, row) : undefined}
+                  onMouseEnter={onRowHover ? () => onRowHover(row.original) : undefined}
+                  onFocus={onRowHover ? () => onRowHover(row.original) : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className={cell.column.columnDef.meta?.cellClassName}>
@@ -263,6 +276,21 @@ export function DataTable<TData>({
                   ))}
                 </TableRow>
               ))
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div role="alert" className="flex flex-col items-center gap-2 text-destructive">
+                    <span className="inline-flex items-center gap-1.5">
+                      <TriangleAlert className="size-4" /> {error}
+                    </span>
+                    {onRetry && (
+                      <Button variant="outline" size="sm" onClick={onRetry}>
+                        <RotateCw /> Thử lại
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">

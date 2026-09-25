@@ -1,7 +1,7 @@
-using System.Linq.Expressions;
+using System.Collections;
+using Helpdesk.Application.Common.Data;
 using Helpdesk.Application.Features.V1.Tickets.DTOs;
 using Helpdesk.Application.Features.V1.Tickets.Services;
-using Helpdesk.Domain.Entities.Tickets;
 using Helpdesk.Domain.Rules;
 
 namespace Helpdesk.Application.Features.V1.Tickets.Queries.SearchTickets;
@@ -15,141 +15,111 @@ public sealed record SearchTicketsQuery : PagedQuery, IRequest<PagedResult<Ticke
     /// <summary>Guid, "me" hoặc "unassigned".</summary>
     public string? AssigneeId { get; init; }
 
+    /// <summary>"#123" → tìm đúng mã; "123" → mã hoặc tiêu đề; chữ → tiêu đề/mô tả.</summary>
     public string? Search { get; init; }
+
     public SlaState? SlaState { get; init; }
     public string? Sort { get; init; }
 }
 
+/// <summary>
+/// Màn danh sách nhiều điều kiện lọc động + phân trang → dùng stored procedure [dbo].[usp_Ticket_Search]
+/// (chuẩn BE §5 · RULES 3.7). SP tự lọc IsDeleted vì không có global query filter của EF.
+/// </summary>
 public sealed class SearchTicketsQueryHandler(
     IUnitOfWork<HelpdeskDbContext> unitOfWork, ICurrentUser currentUser, TimeProvider clock)
     : IRequestHandler<SearchTicketsQuery, PagedResult<TicketListItemDto>>
 {
+    private static readonly HashSet<string> SortColumns =
+        new(StringComparer.OrdinalIgnoreCase) { "createdAt", "priority", "status", "resolveDueAt", "title" };
+
     public async Task<PagedResult<TicketListItemDto>> Handle(SearchTicketsQuery q, CancellationToken ct)
     {
         var now = clock.GetUtcNow().UtcDateTime;
-        IQueryable<Ticket> query = unitOfWork.Repository<Ticket>().AsNoTracking();
+        var canViewAll = await TicketAccess.CanViewAllAsync(currentUser, ct);
+        var (searchText, searchId, idOrTitle) = ParseSearch(q.Search);
+        var (assigneeId, unassigned) = ParseAssignee(q.AssigneeId);
+        var (sortColumn, sortDesc) = ParseSort(q.Sort);
 
-        // Không có TICKET:R → chỉ thấy ticket do mình tạo.
-        if (!await TicketAccess.CanViewAllAsync(currentUser, ct))
+        var ds = unitOfWork.ExecuteStoreProcedureGetMultiTables("[dbo].[usp_Ticket_Search]", new Hashtable
         {
-            var me = currentUser.UserId;
-            query = query.Where(t => t.CreatedById == me);
-        }
+            ["@ViewerId"] = currentUser.UserId,
+            ["@CanViewAll"] = canViewAll,
+            ["@Status"] = q.Status is { } status ? (int)status : null,
+            ["@Priority"] = q.Priority is { } priority ? (int)priority : null,
+            ["@CategoryId"] = q.CategoryId,
+            ["@AssigneeId"] = assigneeId,
+            ["@Unassigned"] = unassigned,
+            ["@SearchText"] = searchText,
+            ["@SearchId"] = searchId,
+            ["@SearchIdOrTitle"] = idOrTitle,
+            ["@SlaState"] = q.SlaState is { } sla ? (int)sla : null,
+            ["@Now"] = now,
+            ["@AtRiskLimit"] = now + SlaRules.AtRiskWindow,
+            ["@SortColumn"] = sortColumn,
+            ["@SortDesc"] = sortDesc,
+            ["@PageNumber"] = q.SafePage,
+            ["@PageSize"] = q.SafePageSize
+        }).ToDataSetSimpleRead();
 
-        if (q.Status is { } status) query = query.Where(t => t.Status == status);
-        if (q.Priority is { } priority) query = query.Where(t => t.Priority == priority);
-        if (q.CategoryId is { } categoryId) query = query.Where(t => t.CategoryId == categoryId);
-        query = ApplyAssigneeFilter(query, q.AssigneeId);
-        query = ApplySearch(query, q.Search);
-        if (q.SlaState is { } sla) query = query.Where(SlaPredicate(sla, now));
+        var totalCount = ds.TryRead<int>()?.FirstOrDefault() ?? 0;
+        var rows = ds.TryRead<TicketRow>() ?? [];
 
-        var projected = ApplySort(query, q.Sort).Select(t => new TicketRow
-        {
-            Id = t.Id,
-            Title = t.Title,
-            Status = t.Status,
-            Priority = t.Priority,
-            CategoryId = t.CategoryId,
-            CategoryName = t.Category.Name,
-            AssigneeId = t.AssigneeId,
-            AssigneeName = t.Assignee != null ? t.Assignee.FullName : null,
-            CreatedById = t.CreatedById,
-            CreatedByName = t.CreatedBy != null ? t.CreatedBy.FullName : "",
-            CreatedAt = t.CreatedDate,
-            ResolveDueAt = t.ResolveDueAt,
-            ResolvedAt = t.ResolvedAt,
-            IsSlaBreached = t.IsSlaBreached,
-            CommentCount = t.Comments.Count
-        });
-
-        // Một câu SQL cho trang dữ liệu (JOIN Category/Account + subquery đếm comment) → không N+1.
-        var page = await PagedResult<TicketRow>.CreateAsync(projected, q.SafePage, q.SafePageSize, ct);
-
-        var items = page.Items.Select(r => new TicketListItemDto(
+        var items = rows.Select(r => new TicketListItemDto(
                 r.Id, r.Title, r.Status, r.Priority, r.CategoryId, r.CategoryName,
                 r.AssigneeId, r.AssigneeName, r.CreatedById, r.CreatedByName, r.CreatedAt, r.ResolveDueAt,
                 SlaRules.Evaluate(r.Status, r.ResolveDueAt, r.ResolvedAt, r.IsSlaBreached, now),
                 r.CommentCount))
             .ToList();
 
-        return new PagedResult<TicketListItemDto>(items, page.TotalCount, page.Page, page.PageSize);
+        return new PagedResult<TicketListItemDto>(items, totalCount, q.SafePage, q.SafePageSize);
     }
 
-    private IQueryable<Ticket> ApplyAssigneeFilter(IQueryable<Ticket> query, string? assignee)
+    /// <summary>"#123" → chỉ Id (seek khóa chính); "123" → Id hoặc tiêu đề; còn lại → LIKE tiêu đề/mô tả.</summary>
+    public static (string? Text, int? Id, bool IdOrTitle) ParseSearch(string? search)
     {
-        if (string.IsNullOrWhiteSpace(assignee)) return query;
-        if (assignee.Equals("unassigned", StringComparison.OrdinalIgnoreCase))
-            return query.Where(t => t.AssigneeId == null);
-
-        var id = assignee.Equals("me", StringComparison.OrdinalIgnoreCase)
-            ? currentUser.UserId
-            : Guid.TryParse(assignee, out var parsed) ? parsed : Guid.Empty;
-        return query.Where(t => t.AssigneeId == id);
-    }
-
-    private static IQueryable<Ticket> ApplySearch(IQueryable<Ticket> query, string? search)
-    {
-        if (string.IsNullOrWhiteSpace(search)) return query;
+        if (string.IsNullOrWhiteSpace(search)) return (null, null, false);
         var term = search.Trim();
+        if (term.Length > 200) term = term[..200];
 
-        if (int.TryParse(term.TrimStart('#'), out var id))
-            return query.Where(t => t.Id == id || t.Title.Contains(term));
-
-        return query.Where(t => t.Title.Contains(term) || t.Description.Contains(term));
+        if (term.StartsWith('#') && int.TryParse(term[1..], out var exactId)) return (null, exactId, false);
+        if (int.TryParse(term, out var id)) return (term, id, true);
+        return (term, null, false);
     }
 
-    public static Expression<Func<Ticket, bool>> SlaPredicate(SlaState state, DateTime now)
+    private (Guid? Id, bool Unassigned) ParseAssignee(string? assignee)
     {
-        var atRiskLimit = now + SlaRules.AtRiskWindow;
-        return state switch
-        {
-            SlaState.Breached => t => t.IsSlaBreached
-                                      || (t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed && t.ResolveDueAt < now)
-                                      || (t.ResolvedAt != null && t.ResolvedAt > t.ResolveDueAt),
-            SlaState.AtRisk => t => !t.IsSlaBreached
-                                    && t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed
-                                    && t.ResolveDueAt >= now && t.ResolveDueAt <= atRiskLimit,
-            SlaState.OnTrack => t => !t.IsSlaBreached
-                                     && t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed
-                                     && (t.ResolveDueAt == null || t.ResolveDueAt > atRiskLimit),
-            SlaState.Met => t => !t.IsSlaBreached
-                                 && (t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed)
-                                 && (t.ResolveDueAt == null || t.ResolvedAt <= t.ResolveDueAt),
-            _ => _ => true
-        };
+        if (string.IsNullOrWhiteSpace(assignee)) return (null, false);
+        if (assignee.Equals("unassigned", StringComparison.OrdinalIgnoreCase)) return (null, true);
+        if (assignee.Equals("me", StringComparison.OrdinalIgnoreCase)) return (currentUser.UserId, false);
+        return (Guid.TryParse(assignee, out var id) ? id : Guid.Empty, false); // id sai → không khớp dòng nào
     }
 
-    private static IQueryable<Ticket> ApplySort(IQueryable<Ticket> query, string? sort) =>
-        (sort ?? "createdAt_desc").ToLowerInvariant() switch
-        {
-            "createdat_asc" => query.OrderBy(t => t.CreatedDate).ThenBy(t => t.Id),
-            "priority_asc" => query.OrderBy(t => t.Priority).ThenByDescending(t => t.CreatedDate),
-            "priority_desc" => query.OrderByDescending(t => t.Priority).ThenByDescending(t => t.CreatedDate),
-            "status_asc" => query.OrderBy(t => t.Status).ThenByDescending(t => t.CreatedDate),
-            "status_desc" => query.OrderByDescending(t => t.Status).ThenByDescending(t => t.CreatedDate),
-            "resolvedueat_asc" => query.OrderBy(t => t.ResolveDueAt).ThenBy(t => t.Id),
-            "resolvedueat_desc" => query.OrderByDescending(t => t.ResolveDueAt).ThenBy(t => t.Id),
-            "title_asc" => query.OrderBy(t => t.Title).ThenBy(t => t.Id),
-            "title_desc" => query.OrderByDescending(t => t.Title).ThenBy(t => t.Id),
-            _ => query.OrderByDescending(t => t.CreatedDate).ThenByDescending(t => t.Id)
-        };
+    public static (string Column, bool Desc) ParseSort(string? sort)
+    {
+        var parts = (sort ?? string.Empty).Split('_', 2);
+        var column = SortColumns.FirstOrDefault(c => c.Equals(parts[0], StringComparison.OrdinalIgnoreCase));
+        if (column is null) return ("createdAt", true);
+        return (column, parts.Length < 2 || !parts[1].Equals("asc", StringComparison.OrdinalIgnoreCase));
+    }
 
+    /// <summary>Map theo tên cột của bảng 2 trong usp_Ticket_Search.</summary>
     private sealed class TicketRow
     {
-        public int Id { get; init; }
-        public string Title { get; init; } = null!;
-        public TicketStatus Status { get; init; }
-        public TicketPriority Priority { get; init; }
-        public int CategoryId { get; init; }
-        public string CategoryName { get; init; } = null!;
-        public Guid? AssigneeId { get; init; }
-        public string? AssigneeName { get; init; }
-        public Guid? CreatedById { get; init; }
-        public string CreatedByName { get; init; } = null!;
-        public DateTime CreatedAt { get; init; }
-        public DateTime? ResolveDueAt { get; init; }
-        public DateTime? ResolvedAt { get; init; }
-        public bool IsSlaBreached { get; init; }
-        public int CommentCount { get; init; }
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public TicketStatus Status { get; set; }
+        public TicketPriority Priority { get; set; }
+        public int CategoryId { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+        public Guid? AssigneeId { get; set; }
+        public string? AssigneeName { get; set; }
+        public Guid? CreatedById { get; set; }
+        public string CreatedByName { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime? ResolveDueAt { get; set; }
+        public DateTime? ResolvedAt { get; set; }
+        public bool IsSlaBreached { get; set; }
+        public int CommentCount { get; set; }
     }
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { CircleCheck, Clock, FolderOpen, Inbox, Siren } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,16 +22,8 @@ function Kpi({
   valueClassName?: string;
   to?: string;
 }) {
-  const navigate = useNavigate();
-  const clickable = !!to;
-  return (
-    <Card
-      className={cn(clickable && 'cursor-pointer transition-shadow hover:shadow-md')}
-      onClick={to ? () => navigate(to) : undefined}
-      role={clickable ? 'link' : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      onKeyDown={to ? (e) => e.key === 'Enter' && navigate(to) : undefined}
-    >
+  const card = (
+    <Card className={cn('h-full', to && 'transition-shadow group-hover:shadow-md')}>
       <CardContent className="flex items-center justify-between gap-3">
         <div className="space-y-1">
           <div className="text-sm text-muted-foreground">{title}</div>
@@ -44,6 +36,16 @@ function Kpi({
         <div className="rounded-lg bg-muted p-2 text-muted-foreground [&_svg]:size-5">{icon}</div>
       </CardContent>
     </Card>
+  );
+  if (!to) return card;
+  // a real link: keyboard / middle-click / screen readers work, with a visible focus ring
+  return (
+    <Link
+      to={to}
+      className="group block rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+    >
+      {card}
+    </Link>
   );
 }
 

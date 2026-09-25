@@ -45,13 +45,13 @@ describe('StatusBadge / PriorityBadge / SlaBadge', () => {
         <SlaBadge state="Met" />
       </TooltipProvider>,
     );
-    expect(screen.getByLabelText('SLA OnTrack').className).toMatch(/text-emerald-600/);
-    const atRisk = screen.getByLabelText('SLA AtRisk');
+    expect(screen.getByLabelText('SLA: Còn hạn (On track)').className).toMatch(/text-emerald-700/);
+    const atRisk = screen.getByLabelText('SLA: Sắp hết hạn (At risk), còn 2h');
     expect(atRisk).toHaveTextContent('còn 2h');
-    expect(atRisk.className).toMatch(/text-orange-500/);
-    expect(screen.getByLabelText('SLA Breached').className).toMatch(/text-red-600/);
-    expect(screen.getByLabelText('SLA Met').className).toMatch(/text-muted-foreground/);
+    expect(atRisk.className).toMatch(/text-orange-700/);
+    expect(screen.getByLabelText('SLA: Quá hạn (Breached)').className).toMatch(/text-red-600/);
+    expect(screen.getByLabelText('SLA: Đạt SLA (Met)').className).toMatch(/text-muted-foreground/);
     // each state has its own icon
-    expect(screen.getByLabelText('SLA Breached').querySelector('svg')).toBeInTheDocument();
+    expect(screen.getByLabelText('SLA: Quá hạn (Breached)').querySelector('svg')).toBeInTheDocument();
   });
 });

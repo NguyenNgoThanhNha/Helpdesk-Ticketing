@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, FileQuestion, ShieldX, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,9 @@ const backToList = (
 
 export function TicketDetailPage() {
   const { id: idParam } = useParams();
+  // the list (with its filters / page) we came from; falls back to /tickets for deep links and notifications
+  const from = (useLocation().state as { from?: unknown } | null)?.from;
+  const backTo = typeof from === 'string' && from.startsWith('/') ? from : '/tickets';
   const id = Number(idParam);
 
   const ticketQuery = useTicket(id);
@@ -87,8 +90,8 @@ export function TicketDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="icon" aria-label="Quay lại" asChild>
-          <Link to="/tickets">
+        <Button variant="outline" size="icon" aria-label="Quay lại danh sách" asChild>
+          <Link to={backTo}>
             <ArrowLeft />
           </Link>
         </Button>

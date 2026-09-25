@@ -27,7 +27,9 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Ignore(x => x.IsActive);
 
         builder.HasIndex(x => x.Status);
-        builder.HasIndex(x => x.AssigneeId);
+        // Phủ cho auto-assign (đếm ticket đang mở theo agent) và My Queue (lọc AssigneeId, sort CreatedDate).
+        // PHẢI include IsDeleted: mọi query EF đều có "IsDeleted = 0" (global filter) — thiếu cột này SQL lại đi key lookup.
+        builder.HasIndex(x => new { x.AssigneeId, x.Status }).IncludeProperties(x => new { x.CreatedDate, x.IsDeleted });
         builder.HasIndex(x => x.CreatedById);
         builder.HasIndex(x => new { x.Status, x.ResolveDueAt });
     }
